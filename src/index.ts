@@ -13,8 +13,8 @@ const PORT = process.env.PORT || 5000
 
 app.use(cors({
   origin: [
-    'https://flaws-production.up.railway.app/',
-    'https://flaws-frontend.vercel.app/', 
+    'https://flaws-production.up.railway.app',
+    'https://flaws-frontend.vercel.app', 
   ],
   credentials: true,
 }))
