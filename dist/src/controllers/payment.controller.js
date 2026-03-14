@@ -7,6 +7,7 @@ exports.verifyPayment = exports.paystackWebhook = exports.initializePayment = vo
 const https_1 = __importDefault(require("https"));
 const crypto_1 = __importDefault(require("crypto"));
 const prisma_1 = __importDefault(require("../lib/prisma"));
+const email_1 = require("../lib/email");
 const initializePayment = async (req, res) => {
     try {
         const { addressId } = req.body;
@@ -99,6 +100,7 @@ const paystackWebhook = async (req, res) => {
             });
             if (existing)
                 return res.sendStatus(200);
+            // Get cart items FIRST before anything else
             const cartItems = await prisma_1.default.cart.findMany({
                 where: { userId },
                 include: { variant: true, product: true },
@@ -111,7 +113,8 @@ const paystackWebhook = async (req, res) => {
             }, 0);
             const shipping = subtotal >= 1000 ? 0 : 100;
             const total = amount / 100;
-            await prisma_1.default.order.create({
+            // Create order
+            const newOrder = await prisma_1.default.order.create({
                 data: {
                     userId,
                     addressId,
@@ -134,8 +137,57 @@ const paystackWebhook = async (req, res) => {
                         }),
                     },
                 },
+                include: {
+                    user: true,
+                    address: true,
+                    items: {
+                        include: {
+                            variant: true,
+                            product: true,
+                        },
+                    },
+                },
             });
+            // Decrement stock BEFORE clearing cart
+            for (const item of cartItems) {
+                await prisma_1.default.productVariant.update({
+                    where: { id: item.variantId },
+                    data: { stock: { decrement: item.quantity } },
+                });
+            }
+            // Clear cart AFTER stock update
             await prisma_1.default.cart.deleteMany({ where: { userId } });
+            // Send email
+            try {
+                if (newOrder.address) {
+                    await (0, email_1.sendOrderConfirmation)({
+                        to: newOrder.user.email,
+                        customerName: newOrder.user.name,
+                        orderId: newOrder.id,
+                        items: newOrder.items.map(item => ({
+                            productName: item.product.name,
+                            color: item.variant.color,
+                            size: item.variant.size,
+                            quantity: item.quantity,
+                            unitPrice: Number(item.unitPrice),
+                        })),
+                        subtotal,
+                        shipping,
+                        total,
+                        address: {
+                            fullName: newOrder.address.fullName,
+                            street: newOrder.address.street,
+                            city: newOrder.address.city,
+                            province: newOrder.address.province,
+                            postalCode: newOrder.address.postalCode,
+                            country: newOrder.address.country,
+                        },
+                    });
+                }
+            }
+            catch (emailErr) {
+                console.error('Email send failed:', emailErr);
+            }
         }
         catch (err) {
             console.error('Webhook error:', err);

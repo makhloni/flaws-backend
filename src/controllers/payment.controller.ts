@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import https from 'https'
 import crypto from 'crypto'
 import prisma from '../lib/prisma'
+import { sendOrderConfirmation } from '../lib/email'
 
 export const initializePayment = async (req: Request, res: Response) => {
     try {
@@ -99,12 +100,12 @@ export const paystackWebhook = async (req: Request, res: Response) => {
         const { userId, addressId } = metadata
 
         try {
-           
             const existing = await prisma.order.findFirst({
                 where: { paystackReference: reference },
             })
             if (existing) return res.sendStatus(200)
 
+            // Get cart items FIRST before anything else
             const cartItems = await prisma.cart.findMany({
                 where: { userId },
                 include: { variant: true, product: true },
@@ -118,7 +119,8 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             const shipping = subtotal >= 1000 ? 0 : 100
             const total = amount / 100
 
-            await prisma.order.create({
+            // Create order
+            const newOrder = await prisma.order.create({
                 data: {
                     userId,
                     addressId,
@@ -141,9 +143,60 @@ export const paystackWebhook = async (req: Request, res: Response) => {
                         }),
                     },
                 },
+                include: {
+                    user: true,
+                    address: true,
+                    items: {
+                        include: {
+                            variant: true,
+                            product: true,
+                        },
+                    },
+                },
             })
 
+            // Decrement stock BEFORE clearing cart
+            for (const item of cartItems) {
+                await prisma.productVariant.update({
+                    where: { id: item.variantId },
+                    data: { stock: { decrement: item.quantity } },
+                })
+            }
+
+            // Clear cart AFTER stock update
             await prisma.cart.deleteMany({ where: { userId } })
+
+            // Send email
+            try {
+                if (newOrder.address) {
+                    await sendOrderConfirmation({
+                        to: newOrder.user.email,
+                        customerName: newOrder.user.name,
+                        orderId: newOrder.id,
+                        items: newOrder.items.map(item => ({
+                            productName: item.product.name,
+                            color: item.variant.color,
+                            size: item.variant.size,
+                            quantity: item.quantity,
+                            unitPrice: Number(item.unitPrice),
+                        })),
+                        subtotal,
+                        shipping,
+                        total,
+                        address: {
+                            fullName: newOrder.address.fullName,
+                            street: newOrder.address.street,
+                            city: newOrder.address.city,
+                            province: newOrder.address.province,
+                            postalCode: newOrder.address.postalCode,
+                            country: newOrder.address.country,
+                        },
+                    })
+                }
+            } catch (emailErr) {
+                console.error('Email send failed:', emailErr)
+            }
+
         } catch (err) {
             console.error('Webhook error:', err)
         }

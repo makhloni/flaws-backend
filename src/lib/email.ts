@@ -1,6 +1,6 @@
-import sgMail from '@sendgrid/mail'
+import { Resend } from 'resend'
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY!)
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 interface OrderItem {
   productName: string
@@ -66,7 +66,6 @@ export async function sendOrderConfirmation(params: SendOrderConfirmationParams)
       <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
     </head>
     <body style="margin:0;padding:0;background-color:#0a0a0a;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-
       <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
 
         <!-- Logo -->
@@ -95,9 +94,7 @@ export async function sendOrderConfirmation(params: SendOrderConfirmationParams)
             Your Order
           </p>
           <table style="width:100%;border-collapse:collapse;">
-            <tbody>
-              ${itemRows}
-            </tbody>
+            <tbody>${itemRows}</tbody>
           </table>
         </div>
 
@@ -158,12 +155,9 @@ export async function sendOrderConfirmation(params: SendOrderConfirmationParams)
     </html>
   `
 
-  await sgMail.send({
+  await resend.emails.send({
+    from: `${process.env.RESEND_FROM_NAME || 'FLAWS'} <${process.env.RESEND_FROM_EMAIL || 'orders@resend.dev'}>`,
     to,
-    from: {
-      email: process.env.SENDGRID_FROM_EMAIL!,
-      name: process.env.SENDGRID_FROM_NAME || 'FLAWS',
-    },
     subject: `Order Confirmed — #${orderRef}`,
     html,
   })

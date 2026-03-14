@@ -1,11 +1,8 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendOrderConfirmation = sendOrderConfirmation;
-const mail_1 = __importDefault(require("@sendgrid/mail"));
-mail_1.default.setApiKey(process.env.SENDGRID_API_KEY);
+const resend_1 = require("resend");
+const resend = new resend_1.Resend(process.env.RESEND_API_KEY);
 async function sendOrderConfirmation(params) {
     const { to, customerName, orderId, items, subtotal, shipping, total, address, } = params;
     const orderRef = orderId.slice(0, 8).toUpperCase();
@@ -32,7 +29,6 @@ async function sendOrderConfirmation(params) {
       <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
     </head>
     <body style="margin:0;padding:0;background-color:#0a0a0a;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-
       <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
 
         <!-- Logo -->
@@ -61,9 +57,7 @@ async function sendOrderConfirmation(params) {
             Your Order
           </p>
           <table style="width:100%;border-collapse:collapse;">
-            <tbody>
-              ${itemRows}
-            </tbody>
+            <tbody>${itemRows}</tbody>
           </table>
         </div>
 
@@ -123,12 +117,9 @@ async function sendOrderConfirmation(params) {
     </body>
     </html>
   `;
-    await mail_1.default.send({
+    await resend.emails.send({
+        from: `${process.env.RESEND_FROM_NAME || 'FLAWS'} <${process.env.RESEND_FROM_EMAIL || 'orders@resend.dev'}>`,
         to,
-        from: {
-            email: process.env.SENDGRID_FROM_EMAIL,
-            name: process.env.SENDGRID_FROM_NAME || 'FLAWS',
-        },
         subject: `Order Confirmed — #${orderRef}`,
         html,
     });
