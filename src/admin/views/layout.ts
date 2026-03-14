@@ -115,6 +115,9 @@ export function layout(title: string, body: string, activePage = '') {
     <div class="nav-section">Commerce</div>
     <a href="/admin/orders" class="nav-link ${activePage === 'orders' ? 'active' : ''}">Orders</a>
     <a href="/admin/users" class="nav-link ${activePage === 'users' ? 'active' : ''}">Users</a>
+    <div class="nav-section">Content</div>
+    a href="/admin/homepage" class="nav-link ${activePage === 'homepage' ? 'active' : ''}">Homepage</a>
+    <a href="/admin/activity" class="nav-link ${activePage === 'activity' ? 'active' : ''}">Activity Log</a>
     <div class="sidebar-footer">
       <form action="/admin/logout" method="POST">
         <button type="submit" class="logout-btn">Sign Out</button>
