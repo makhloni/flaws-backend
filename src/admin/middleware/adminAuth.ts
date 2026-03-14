@@ -1,0 +1,6 @@
+import { Request, Response, NextFunction } from 'express'
+
+export function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
+  if ((req.session as any).isAdmin) return next()
+  res.redirect('/admin/login')
+}
