@@ -3,7 +3,6 @@ import https from 'https'
 import crypto from 'crypto'
 import prisma from '../lib/prisma'
 
-// Initialize transaction — called before popup opens
 export const initializePayment = async (req: Request, res: Response) => {
     try {
         const { addressId } = req.body
@@ -12,21 +11,15 @@ export const initializePayment = async (req: Request, res: Response) => {
         if (!userId) return res.status(401).json({ message: 'Unauthorized' })
         if (!addressId) return res.status(400).json({ message: 'Address required' })
 
-        // Get user
         const user = await prisma.user.findUnique({ where: { id: userId } })
         if (!user) return res.status(404).json({ message: 'User not found' })
 
-        // Get cart
         const cartItems = await prisma.cart.findMany({
             where: { userId },
-            include: {
-                variant: true,
-                product: true,
-            },
+            include: { variant: true, product: true },
         })
         if (cartItems.length === 0) return res.status(400).json({ message: 'Cart is empty' })
 
-        // Calculate total
         const subtotal = cartItems.reduce((sum, item) => {
             const price = Number(item.variant.salePrice ?? item.variant.price)
             return sum + price * item.quantity
@@ -34,13 +27,11 @@ export const initializePayment = async (req: Request, res: Response) => {
         const shipping = subtotal >= 1000 ? 0 : 100
         const total = subtotal + shipping
 
-        // Generate unique reference
         const reference = `FLAWS-${Date.now()}-${Math.random().toString(36).slice(2).toUpperCase()}`
 
-        // Initialize with Paystack
         const params = JSON.stringify({
             email: user.email,
-            amount: Math.round(total * 100), // Paystack uses kobo/cents
+            amount: Math.round(total * 100),
             currency: 'ZAR',
             reference,
             metadata: {
@@ -90,7 +81,6 @@ export const initializePayment = async (req: Request, res: Response) => {
     }
 }
 
-// Webhook — called by Paystack after payment
 export const paystackWebhook = async (req: Request, res: Response) => {
     const secret = process.env.PAYSTACK_SECRET_KEY!
     const hash = crypto
@@ -109,13 +99,12 @@ export const paystackWebhook = async (req: Request, res: Response) => {
         const { userId, addressId } = metadata
 
         try {
-            // Verify transaction isn't already processed
+           
             const existing = await prisma.order.findFirst({
                 where: { paystackReference: reference },
             })
             if (existing) return res.sendStatus(200)
 
-            // Get cart items
             const cartItems = await prisma.cart.findMany({
                 where: { userId },
                 include: { variant: true, product: true },
@@ -127,9 +116,8 @@ export const paystackWebhook = async (req: Request, res: Response) => {
                 return sum + price * item.quantity
             }, 0)
             const shipping = subtotal >= 1000 ? 0 : 100
-            const total = amount / 100 // convert back from cents
+            const total = amount / 100
 
-            // Create order
             await prisma.order.create({
                 data: {
                     userId,
@@ -143,20 +131,18 @@ export const paystackWebhook = async (req: Request, res: Response) => {
                     items: {
                         create: cartItems.map(item => {
                             const unitPrice = Number(item.variant.salePrice ?? item.variant.price)
-                            const total = unitPrice * item.quantity
                             return {
                                 variantId: item.variantId,
                                 productId: item.productId,
                                 quantity: item.quantity,
                                 unitPrice,
-                                total,
+                                total: unitPrice * item.quantity,
                             }
                         }),
                     },
                 },
             })
 
-            // Clear cart
             await prisma.cart.deleteMany({ where: { userId } })
         } catch (err) {
             console.error('Webhook error:', err)
@@ -166,51 +152,95 @@ export const paystackWebhook = async (req: Request, res: Response) => {
     res.sendStatus(200)
 }
 
-// Verify payment — called by frontend after popup closes
 export const verifyPayment = async (req: Request, res: Response) => {
-  try {
-    const reference = req.params.reference as string
-    const userId = req.user?.id
+    try {
+        const reference = req.params.reference as string
+        const userId = req.user?.id
 
-    const options = {
-      hostname: 'api.paystack.co',
-      port: 443,
-      path: `/transaction/verify/${reference}`,
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      },
+        const options = {
+            hostname: 'api.paystack.co',
+            port: 443,
+            path: `/transaction/verify/${reference}`,
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            },
+        }
+
+        const paystackRes = await new Promise<any>((resolve, reject) => {
+            const reqPaystack = https.request(options, (paystackResponse) => {
+                let data = ''
+                paystackResponse.on('data', chunk => data += chunk)
+                paystackResponse.on('end', () => resolve(JSON.parse(data)))
+            })
+            reqPaystack.on('error', reject)
+            reqPaystack.end()
+        })
+
+        if (!paystackRes.data || paystackRes.data.status !== 'success') {
+            return res.status(400).json({ message: 'Payment not successful' })
+        }
+
+        if (!userId) return res.status(401).json({ message: 'Unauthorized' })
+
+        let order = await prisma.order.findFirst({
+            where: { paystackReference: reference },
+        })
+
+        if (order) {
+            return res.json({ orderId: order.id })
+        }
+
+        const { metadata, amount } = paystackRes.data
+        const { addressId } = metadata
+
+        const cartItems = await prisma.cart.findMany({
+            where: { userId },
+            include: { variant: true, product: true },
+        })
+
+        if (cartItems.length === 0) {
+            order = await prisma.order.findFirst({ where: { paystackReference: reference } })
+            if (!order) return res.status(404).json({ message: 'Order not found' })
+            return res.json({ orderId: order.id })
+        }
+
+        const subtotal = cartItems.reduce((sum, item) => {
+            const price = Number(item.variant.salePrice ?? item.variant.price)
+            return sum + price * item.quantity
+        }, 0)
+        const shipping = subtotal >= 1000 ? 0 : 100
+        const total = amount / 100
+
+        order = await prisma.order.create({
+            data: {
+                userId,
+                addressId,
+                status: 'CONFIRMED',
+                subtotal,
+                shippingCost: shipping,
+                discount: 0,
+                total,
+                paystackReference: reference,
+                items: {
+                    create: cartItems.map(item => {
+                        const unitPrice = Number(item.variant.salePrice ?? item.variant.price)
+                        return {
+                            variantId: item.variantId,
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            unitPrice,
+                            total: unitPrice * item.quantity,
+                        }
+                    }),
+                },
+            },
+        })
+
+        await prisma.cart.deleteMany({ where: { userId } })
+
+        res.json({ orderId: order.id })
+    } catch (err: any) {
+        res.status(500).json({ message: err.message })
     }
-
-    const paystackRes = await new Promise<any>((resolve, reject) => {
-      const reqPaystack = https.request(options, (paystackResponse) => {
-        let data = ''
-        paystackResponse.on('data', chunk => data += chunk)
-        paystackResponse.on('end', () => resolve(JSON.parse(data)))
-      })
-      reqPaystack.on('error', reject)
-      reqPaystack.end()
-    })
-
-    if (!paystackRes.data || paystackRes.data.status !== 'success') {
-      return res.status(400).json({ message: 'Payment not successful' })
-    }
-
-    const order = await prisma.order.findFirst({
-      where: { paystackReference: reference, userId },
-    })
-
-    if (!order) {
-      await new Promise(r => setTimeout(r, 2000))
-      const retryOrder = await prisma.order.findFirst({
-        where: { paystackReference: reference, userId },
-      })
-      if (!retryOrder) return res.status(404).json({ message: 'Order not found' })
-      return res.json({ orderId: retryOrder.id })
-    }
-
-    res.json({ orderId: order.id })
-  } catch (err: any) {
-    res.status(500).json({ message: err.message })
-  }
 }
