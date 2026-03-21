@@ -10,12 +10,13 @@ function getDateRange(interval) {
     const now = new Date();
     switch (interval) {
         case 'daily':
-            // Last 30 days, one point per day
             return {
                 from: new Date(new Date().setDate(now.getDate() - 29)),
+                prevFrom: new Date(new Date().setDate(now.getDate() - 59)),
+                prevTo: new Date(new Date().setDate(now.getDate() - 30)),
                 points: 30,
                 labelFn: (d) => `${d.getDate()}/${d.getMonth() + 1}`,
-                stepFn: (base, i) => {
+                stepFn: (_, i) => {
                     const d = new Date(now);
                     d.setDate(now.getDate() - (29 - i));
                     d.setHours(0, 0, 0, 0);
@@ -23,12 +24,13 @@ function getDateRange(interval) {
                 },
             };
         case 'weekly':
-            // Last 12 weeks, one point per week
             return {
                 from: new Date(new Date().setDate(now.getDate() - 83)),
+                prevFrom: new Date(new Date().setDate(now.getDate() - 167)),
+                prevTo: new Date(new Date().setDate(now.getDate() - 84)),
                 points: 12,
                 labelFn: (d) => `W${getWeekNumber(d)}`,
-                stepFn: (base, i) => {
+                stepFn: (_, i) => {
                     const d = new Date(now);
                     d.setDate(now.getDate() - (11 - i) * 7);
                     d.setHours(0, 0, 0, 0);
@@ -36,12 +38,13 @@ function getDateRange(interval) {
                 },
             };
         case 'monthly':
-            // Last 12 months, one point per month
             return {
                 from: new Date(new Date().setMonth(now.getMonth() - 11)),
+                prevFrom: new Date(new Date().setMonth(now.getMonth() - 23)),
+                prevTo: new Date(new Date().setMonth(now.getMonth() - 12)),
                 points: 12,
                 labelFn: (d) => d.toLocaleString('default', { month: 'short' }),
-                stepFn: (base, i) => {
+                stepFn: (_, i) => {
                     const d = new Date(now);
                     d.setMonth(now.getMonth() - (11 - i));
                     d.setDate(1);
@@ -50,12 +53,13 @@ function getDateRange(interval) {
                 },
             };
         case 'yearly':
-            // Last 5 years, one point per year
             return {
                 from: new Date(new Date().setFullYear(now.getFullYear() - 4)),
+                prevFrom: new Date(new Date().setFullYear(now.getFullYear() - 9)),
+                prevTo: new Date(new Date().setFullYear(now.getFullYear() - 5)),
                 points: 5,
                 labelFn: (d) => `${d.getFullYear()}`,
-                stepFn: (base, i) => {
+                stepFn: (_, i) => {
                     const d = new Date(now);
                     d.setFullYear(now.getFullYear() - (4 - i));
                     d.setMonth(0, 1);
@@ -77,21 +81,17 @@ function groupOrders(orders, interval, points, stepFn) {
         const revenue = orders
             .filter(o => {
             const od = o.createdAt;
-            if (interval === 'daily') {
+            if (interval === 'daily')
                 return od.toISOString().slice(0, 10) === stepDate.toISOString().slice(0, 10);
-            }
             if (interval === 'weekly') {
-                const weekStart = new Date(stepDate);
-                const weekEnd = new Date(stepDate);
-                weekEnd.setDate(weekStart.getDate() + 6);
-                return od >= weekStart && od <= weekEnd;
+                const end = new Date(stepDate);
+                end.setDate(stepDate.getDate() + 6);
+                return od >= stepDate && od <= end;
             }
-            if (interval === 'monthly') {
+            if (interval === 'monthly')
                 return od.getFullYear() === stepDate.getFullYear() && od.getMonth() === stepDate.getMonth();
-            }
-            if (interval === 'yearly') {
+            if (interval === 'yearly')
                 return od.getFullYear() === stepDate.getFullYear();
-            }
             return false;
         })
             .reduce((sum, o) => sum + Number(o.total), 0);
@@ -105,16 +105,16 @@ function buildSVG(chartData, labelFn, interval) {
     const padding = { top: 20, right: 20, bottom: 30, left: 60 };
     const innerWidth = chartWidth - padding.left - padding.right;
     const innerHeight = chartHeight - padding.top - padding.bottom;
-    const points = chartData.map((d, i) => {
+    const pts = chartData.map((d, i) => {
         const x = padding.left + (i / Math.max(chartData.length - 1, 1)) * innerWidth;
         const y = padding.top + innerHeight - (d.revenue / maxRevenue) * innerHeight;
         return { x, y, ...d };
     });
-    const polylinePoints = points.map(p => `${p.x},${p.y}`).join(' ');
+    const polylinePoints = pts.map(p => `${p.x},${p.y}`).join(' ');
     const areaPoints = [
-        `${points[0].x},${padding.top + innerHeight}`,
-        ...points.map(p => `${p.x},${p.y}`),
-        `${points[points.length - 1].x},${padding.top + innerHeight}`,
+        `${pts[0].x},${padding.top + innerHeight}`,
+        ...pts.map(p => `${p.x},${p.y}`),
+        `${pts[pts.length - 1].x},${padding.top + innerHeight}`,
     ].join(' ');
     const yLabels = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
         const value = maxRevenue * ratio;
@@ -143,12 +143,12 @@ function buildSVG(chartData, labelFn, interval) {
     }).join('')}
       <polygon points="${areaPoints}" fill="url(#areaGrad)"/>
       <polyline points="${polylinePoints}" fill="none" stroke="#ffffff" stroke-width="1.5"/>
-      ${points.filter((_, i) => i % dotSkip === 0).map(p => `
+      ${pts.filter((_, i) => i % dotSkip === 0).map(p => `
         <circle cx="${p.x}" cy="${p.y}" r="3" fill="#ffffff"/>
       `).join('')}
       ${yLabels}
       ${xLabels}
-      ${points.map(p => `
+      ${pts.map(p => `
         <g class="chart-point" data-date="${p.date.toISOString()}" data-revenue="${p.revenue.toFixed(2)}">
           <line x1="${p.x}" y1="${padding.top}" x2="${p.x}" y2="${padding.top + innerHeight}" stroke="transparent" stroke-width="20"/>
           <circle cx="${p.x}" cy="${p.y}" r="6" fill="transparent"/>
@@ -160,8 +160,12 @@ function buildSVG(chartData, labelFn, interval) {
 async function getDashboard(req, res) {
     const interval = req.query.interval || 'daily';
     const now = new Date();
-    const { from, points, labelFn, stepFn } = getDateRange(interval);
-    const [totalOrders, totalUsers, totalProducts, recentOrders, revenue, periodOrders, lowStockVariants] = await Promise.all([
+    const { from, prevFrom, prevTo, points, labelFn, stepFn } = getDateRange(interval);
+    const periodStart = from;
+    const periodEnd = now;
+    const fortyEightHoursAgo = new Date(now);
+    fortyEightHoursAgo.setHours(now.getHours() - 48);
+    const [totalOrders, totalUsers, totalProducts, recentOrders, revenue, periodOrders, prevPeriodRevenue, pendingOrderCount, stuckOrders, zeroStockVariants, lowStockVariants, topProducts, allUserOrders,] = await Promise.all([
         prisma_1.default.order.count(),
         prisma_1.default.user.count(),
         prisma_1.default.product.count(),
@@ -175,20 +179,83 @@ async function getDashboard(req, res) {
             where: { status: { not: 'CANCELLED' } },
         }),
         prisma_1.default.order.findMany({
-            where: {
-                createdAt: { gte: from },
-                status: { not: 'CANCELLED' },
-            },
+            where: { createdAt: { gte: from }, status: { not: 'CANCELLED' } },
             select: { createdAt: true, total: true },
             orderBy: { createdAt: 'asc' },
         }),
+        prisma_1.default.order.aggregate({
+            _sum: { total: true },
+            where: {
+                createdAt: { gte: prevFrom, lte: prevTo },
+                status: { not: 'CANCELLED' },
+            },
+        }),
+        prisma_1.default.order.count({ where: { status: 'PENDING' } }),
+        prisma_1.default.order.findMany({
+            where: { status: 'PROCESSING', updatedAt: { lte: fortyEightHoursAgo } },
+            include: { user: true },
+            orderBy: { updatedAt: 'asc' },
+            take: 5,
+        }),
         prisma_1.default.productVariant.findMany({
-            where: { stock: { lte: 5 } },
+            where: { stock: 0 },
+            include: { product: { select: { id: true, name: true } } },
+            take: 5,
+        }),
+        prisma_1.default.productVariant.findMany({
+            where: { stock: { gt: 0, lte: 5 } },
             include: { product: { select: { name: true } } },
             orderBy: { stock: 'asc' },
             take: 10,
         }),
+        prisma_1.default.orderItem.groupBy({
+            by: ['productId'],
+            _sum: { total: true, quantity: true },
+            orderBy: { _sum: { total: 'desc' } },
+            take: 5,
+        }),
+        prisma_1.default.order.findMany({
+            select: { userId: true, createdAt: true },
+            orderBy: { createdAt: 'asc' },
+        }),
     ]);
+    // Revenue comparison
+    const currentRevenue = periodOrders.reduce((sum, o) => sum + Number(o.total), 0);
+    const previousRevenue = Number(prevPeriodRevenue._sum.total || 0);
+    const revenueChange = previousRevenue === 0
+        ? 100
+        : ((currentRevenue - previousRevenue) / previousRevenue) * 100;
+    const revenueUp = revenueChange >= 0;
+    // New vs returning customers
+    const firstOrderByUser = {};
+    allUserOrders.forEach(o => {
+        if (!firstOrderByUser[o.userId] || o.createdAt < firstOrderByUser[o.userId]) {
+            firstOrderByUser[o.userId] = o.createdAt;
+        }
+    });
+    const periodOrdersForCustomers = allUserOrders.filter(o => o.createdAt >= periodStart && o.createdAt <= periodEnd);
+    let newCustomers = 0;
+    let returningCustomers = 0;
+    const countedUsers = new Set();
+    periodOrdersForCustomers.forEach(o => {
+        if (countedUsers.has(o.userId))
+            return;
+        countedUsers.add(o.userId);
+        if (firstOrderByUser[o.userId] >= periodStart)
+            newCustomers++;
+        else
+            returningCustomers++;
+    });
+    const totalCustomersInPeriod = newCustomers + returningCustomers;
+    const newPct = totalCustomersInPeriod === 0 ? 50 : Math.round((newCustomers / totalCustomersInPeriod) * 100);
+    const retPct = 100 - newPct;
+    // Top products with details
+    const topProductIds = topProducts.map(p => p.productId);
+    const topProductDetails = await prisma_1.default.product.findMany({
+        where: { id: { in: topProductIds } },
+        select: { id: true, name: true, images: { where: { isPrimary: true }, take: 1 } },
+    });
+    const topProductMap = Object.fromEntries(topProductDetails.map(p => [p.id, p]));
     const totalRevenue = Number(revenue._sum.total || 0).toFixed(2);
     const chartData = groupOrders(periodOrders, interval, points, stepFn);
     const svgChart = buildSVG(chartData, labelFn, interval);
@@ -200,35 +267,84 @@ async function getDashboard(req, res) {
     };
     const intervalButtons = ['daily', 'weekly', 'monthly', 'yearly'].map(iv => `
     <a href="/admin?interval=${iv}" style="
-      display:inline-block;
-      padding:0.4rem 0.9rem;
-      font-size:0.6rem;
-      letter-spacing:0.15em;
-      text-transform:uppercase;
-      text-decoration:none;
+      display:inline-block;padding:0.4rem 0.9rem;
+      font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;text-decoration:none;
       border:1px solid ${interval === iv ? '#ffffff' : '#333'};
       color:${interval === iv ? '#ffffff' : '#888'};
       background:${interval === iv ? '#1a1a1a' : 'none'};
-      transition:all 0.2s;
     ">${iv}</a>
   `).join('');
+    const alertsHtml = `
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+      <a href="/admin/orders?status=PENDING" style="
+        text-decoration:none;flex:1;min-width:180px;display:flex;align-items:center;gap:1rem;
+        padding:1rem 1.25rem;background:#111;
+        border:1px solid ${pendingOrderCount > 0 ? '#ffeb3b44' : '#1a1a1a'};
+      ">
+        <div style="width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;
+          background:${pendingOrderCount > 0 ? '#2a2a00' : '#1a1a1a'};">⏳</div>
+        <div>
+          <div style="font-size:1.25rem;font-weight:700;color:${pendingOrderCount > 0 ? '#ffeb3b' : '#fff'};">${pendingOrderCount}</div>
+          <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#888;">Pending Orders</div>
+        </div>
+      </a>
+
+      <a href="/admin/orders?status=PROCESSING" style="
+        text-decoration:none;flex:1;min-width:180px;display:flex;align-items:center;gap:1rem;
+        padding:1rem 1.25rem;background:#111;
+        border:1px solid ${stuckOrders.length > 0 ? '#ff6b6b44' : '#1a1a1a'};
+      ">
+        <div style="width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;
+          background:${stuckOrders.length > 0 ? '#1a0000' : '#1a1a1a'};">🔴</div>
+        <div>
+          <div style="font-size:1.25rem;font-weight:700;color:${stuckOrders.length > 0 ? '#ff6b6b' : '#fff'};">${stuckOrders.length}</div>
+          <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#888;">Stuck 48h+ Processing</div>
+        </div>
+      </a>
+
+      <a href="/admin/products" style="
+        text-decoration:none;flex:1;min-width:180px;display:flex;align-items:center;gap:1rem;
+        padding:1rem 1.25rem;background:#111;
+        border:1px solid ${zeroStockVariants.length > 0 ? '#ff6b6b44' : '#1a1a1a'};
+      ">
+        <div style="width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;
+          background:${zeroStockVariants.length > 0 ? '#1a0000' : '#1a1a1a'};">📦</div>
+        <div>
+          <div style="font-size:1.25rem;font-weight:700;color:${zeroStockVariants.length > 0 ? '#ff6b6b' : '#fff'};">${zeroStockVariants.length}</div>
+          <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#888;">Out of Stock</div>
+        </div>
+      </a>
+    </div>
+  `;
+    const topProductRows = topProducts.length === 0
+        ? '<div class="empty-state" style="padding:2rem;">No sales data yet</div>'
+        : topProducts.map((p, i) => {
+            const detail = topProductMap[p.productId];
+            const img = detail?.images[0]?.url;
+            return `
+          <tr>
+            <td style="color:#555;font-size:0.7rem;width:24px;">${i + 1}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:0.75rem;">
+                ${img
+                ? `<img src="${img}" style="width:36px;height:44px;object-fit:cover;background:#1a1a1a;flex-shrink:0;" />`
+                : `<div style="width:36px;height:44px;background:#1a1a1a;flex-shrink:0;"></div>`}
+                <strong style="font-size:0.8rem;">${detail?.name || 'Unknown'}</strong>
+              </div>
+            </td>
+            <td style="color:#888;">${p._sum.quantity || 0} units</td>
+            <td style="font-weight:600;">R${Number(p._sum.total || 0).toFixed(2)}</td>
+            <td><a href="/admin/products/${p.productId}/edit" class="btn btn-sm btn-secondary">Edit</a></td>
+          </tr>
+        `;
+        }).join('');
     const lowStockRows = lowStockVariants.length === 0
         ? '<div class="empty-state" style="padding:2rem;">All variants well stocked</div>'
         : lowStockVariants.map(v => `
         <tr>
           <td><strong>${v.product.name}</strong></td>
           <td style="color:#888;">${v.color} / ${v.size}</td>
-          <td>
-            <span style="
-              display:inline-block;padding:3px 10px;font-size:0.6rem;
-              letter-spacing:0.1em;font-weight:600;
-              background:${v.stock === 0 ? '#1a0000' : '#1a0a00'};
-              color:${v.stock === 0 ? '#ff6b6b' : '#ffb347'};
-              border:1px solid ${v.stock === 0 ? '#ff6b6b33' : '#ffb34733'};
-            ">
-              ${v.stock === 0 ? 'OUT OF STOCK' : `${v.stock} left`}
-            </span>
-          </td>
+          <td><span style="display:inline-block;padding:3px 10px;font-size:0.6rem;letter-spacing:0.1em;font-weight:600;background:#1a0a00;color:#ffb347;border:1px solid #ffb34733;">${v.stock} left</span></td>
           <td><a href="/admin/products/${v.productId}/edit" class="btn btn-sm btn-secondary">Restock</a></td>
         </tr>
       `).join('');
@@ -243,8 +359,7 @@ async function getDashboard(req, res) {
     </tr>
   `).join('');
     const body = `
-    <!-- Stats -->
-    <div class="card-grid">
+    <div class="card-grid" style="margin-bottom:1.5rem;">
       <div class="card">
         <div class="stat-label">Total Revenue</div>
         <div class="stat-value">R${totalRevenue}</div>
@@ -264,24 +379,61 @@ async function getDashboard(req, res) {
       </div>
     </div>
 
-    <!-- Revenue Chart -->
+    ${alertsHtml}
+
     <div class="card" style="margin-bottom:1.5rem;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem;">
         <div>
           <div class="stat-label">Revenue</div>
           <div style="font-size:0.85rem;font-weight:600;">${intervalLabels[interval]}</div>
+          <div style="margin-top:0.35rem;font-size:0.7rem;color:${revenueUp ? '#81c784' : '#ef9a9a'};">
+            ${revenueUp ? '▲' : '▼'} ${Math.abs(revenueChange).toFixed(1)}% vs previous period
+          </div>
         </div>
         <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
           ${intervalButtons}
           <div id="chart-tooltip" style="font-size:0.75rem;color:#888;text-align:right;min-width:80px;"></div>
         </div>
       </div>
-      <div id="chart-container" style="position:relative;">
-        ${svgChart}
+      <div style="position:relative;">${svgChart}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:1.5rem;margin-bottom:1.5rem;">
+      <div class="card">
+        <div style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#888;margin-bottom:1.5rem;">
+          Customers — ${intervalLabels[interval]}
+        </div>
+        ${totalCustomersInPeriod === 0
+        ? '<div class="empty-state" style="padding:1rem;">No orders this period</div>'
+        : `
+            <div style="height:8px;background:#1a1a1a;border-radius:4px;overflow:hidden;margin-bottom:1.25rem;">
+              <div style="height:100%;width:${newPct}%;background:#ffffff;border-radius:4px;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:1rem;">
+              <div>
+                <div style="font-size:1.5rem;font-weight:700;">${newCustomers}</div>
+                <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#888;">New (${newPct}%)</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:1.5rem;font-weight:700;color:#888;">${returningCustomers}</div>
+                <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#555;">Returning (${retPct}%)</div>
+              </div>
+            </div>
+          `}
+      </div>
+
+      <div class="card">
+        <div class="page-header" style="margin-bottom:1.25rem;">
+          <span style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#888;">Top Products</span>
+          <a href="/admin/products" class="btn btn-sm btn-secondary">All Products</a>
+        </div>
+        <table>
+          <thead><tr><th>#</th><th>Product</th><th>Units</th><th>Revenue</th><th></th></tr></thead>
+          <tbody>${topProductRows}</tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Bottom grid -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
       <div class="card">
         <div class="page-header" style="margin-bottom:1.5rem;">
@@ -298,8 +450,8 @@ async function getDashboard(req, res) {
       <div class="card">
         <div class="page-header" style="margin-bottom:1.5rem;">
           <span style="font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:#888;">
-            Stock Alerts
-            ${lowStockVariants.length > 0 ? `<span style="display:inline-block;margin-left:0.5rem;background:#1a0000;color:#ff6b6b;font-size:0.55rem;padding:2px 8px;border-radius:2px;">${lowStockVariants.length}</span>` : ''}
+            Low Stock
+            ${lowStockVariants.length > 0 ? `<span style="display:inline-block;margin-left:0.5rem;background:#1a0a00;color:#ffb347;font-size:0.55rem;padding:2px 8px;">${lowStockVariants.length}</span>` : ''}
           </span>
           <a href="/admin/products" class="btn btn-sm btn-secondary">All Products</a>
         </div>
@@ -317,15 +469,10 @@ async function getDashboard(req, res) {
           const revenue = this.dataset.revenue
           const interval = '${interval}'
           let label = ''
-          if (interval === 'daily') {
-            label = date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })
-          } else if (interval === 'weekly') {
-            label = 'Week of ' + date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })
-          } else if (interval === 'monthly') {
-            label = date.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' })
-          } else if (interval === 'yearly') {
-            label = date.getFullYear().toString()
-          }
+          if (interval === 'daily') label = date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })
+          else if (interval === 'weekly') label = 'Week of ' + date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })
+          else if (interval === 'monthly') label = date.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' })
+          else if (interval === 'yearly') label = date.getFullYear().toString()
           document.getElementById('chart-tooltip').innerHTML =
             '<span style="color:#fff;font-weight:600;">R' + revenue + '</span>' +
             '<br/><span style="color:#555;font-size:0.65rem;">' + label + '</span>'
