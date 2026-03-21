@@ -113,10 +113,9 @@ export const mergeCart = async (req: Request, res: Response) => {
       })
 
       if (existing) {
-        // Add guest quantity to existing cart quantity
         await prisma.cart.update({
           where: { userId_variantId: { userId, variantId: item.variantId } },
-          data: { quantity: existing.quantity + item.quantity },
+          data: { quantity: { increment: item.quantity } },
         })
       } else {
         await prisma.cart.create({

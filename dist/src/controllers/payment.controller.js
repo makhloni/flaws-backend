@@ -81,6 +81,102 @@ const initializePayment = async (req, res) => {
     }
 };
 exports.initializePayment = initializePayment;
+// Shared helper — creates order, decrements stock, clears cart, sends email
+async function fulfillOrder({ userId, addressId, reference, amountInCents, sendEmail = false, }) {
+    // Check not already fulfilled
+    const existing = await prisma_1.default.order.findFirst({
+        where: { paystackReference: reference },
+    });
+    if (existing)
+        return existing;
+    const cartItems = await prisma_1.default.cart.findMany({
+        where: { userId },
+        include: { variant: true, product: true },
+    });
+    if (cartItems.length === 0)
+        return null;
+    const subtotal = cartItems.reduce((sum, item) => {
+        const price = Number(item.variant.salePrice ?? item.variant.price);
+        return sum + price * item.quantity;
+    }, 0);
+    const shipping = subtotal >= 1000 ? 0 : 100;
+    const total = amountInCents / 100;
+    // Create order
+    const newOrder = await prisma_1.default.order.create({
+        data: {
+            userId,
+            addressId,
+            status: 'CONFIRMED',
+            subtotal,
+            shippingCost: shipping,
+            discount: 0,
+            total,
+            paystackReference: reference,
+            items: {
+                create: cartItems.map(item => {
+                    const unitPrice = Number(item.variant.salePrice ?? item.variant.price);
+                    return {
+                        variantId: item.variantId,
+                        productId: item.productId,
+                        quantity: item.quantity,
+                        unitPrice,
+                        total: unitPrice * item.quantity,
+                    };
+                }),
+            },
+        },
+        include: {
+            user: true,
+            address: true,
+            items: {
+                include: { variant: true, product: true },
+            },
+        },
+    });
+    // Decrement stock
+    for (const item of cartItems) {
+        await prisma_1.default.productVariant.update({
+            where: { id: item.variantId },
+            data: { stock: { decrement: item.quantity } },
+        });
+    }
+    // Clear cart
+    await prisma_1.default.cart.deleteMany({ where: { userId } });
+    // Send email
+    if (sendEmail) {
+        try {
+            if (newOrder.address) {
+                await (0, email_1.sendOrderConfirmation)({
+                    to: newOrder.user.email,
+                    customerName: newOrder.user.name,
+                    orderId: newOrder.id,
+                    items: newOrder.items.map(item => ({
+                        productName: item.product.name,
+                        color: item.variant.color,
+                        size: item.variant.size,
+                        quantity: item.quantity,
+                        unitPrice: Number(item.unitPrice),
+                    })),
+                    subtotal,
+                    shipping,
+                    total,
+                    address: {
+                        fullName: newOrder.address.fullName,
+                        street: newOrder.address.street,
+                        city: newOrder.address.city,
+                        province: newOrder.address.province,
+                        postalCode: newOrder.address.postalCode,
+                        country: newOrder.address.country,
+                    },
+                });
+            }
+        }
+        catch (emailErr) {
+            console.error('Email send failed:', emailErr);
+        }
+    }
+    return newOrder;
+}
 const paystackWebhook = async (req, res) => {
     const secret = process.env.PAYSTACK_SECRET_KEY;
     const hash = crypto_1.default
@@ -95,102 +191,16 @@ const paystackWebhook = async (req, res) => {
         const { reference, metadata, amount } = event.data;
         const { userId, addressId } = metadata;
         try {
-            const existing = await prisma_1.default.order.findFirst({
-                where: { paystackReference: reference },
+            await fulfillOrder({
+                userId,
+                addressId,
+                reference,
+                amountInCents: amount,
+                sendEmail: true,
             });
-            if (existing)
-                return res.sendStatus(200);
-            // Get cart items FIRST before anything else
-            const cartItems = await prisma_1.default.cart.findMany({
-                where: { userId },
-                include: { variant: true, product: true },
-            });
-            if (cartItems.length === 0)
-                return res.sendStatus(200);
-            const subtotal = cartItems.reduce((sum, item) => {
-                const price = Number(item.variant.salePrice ?? item.variant.price);
-                return sum + price * item.quantity;
-            }, 0);
-            const shipping = subtotal >= 1000 ? 0 : 100;
-            const total = amount / 100;
-            // Create order
-            const newOrder = await prisma_1.default.order.create({
-                data: {
-                    userId,
-                    addressId,
-                    status: 'CONFIRMED',
-                    subtotal,
-                    shippingCost: shipping,
-                    discount: 0,
-                    total,
-                    paystackReference: reference,
-                    items: {
-                        create: cartItems.map(item => {
-                            const unitPrice = Number(item.variant.salePrice ?? item.variant.price);
-                            return {
-                                variantId: item.variantId,
-                                productId: item.productId,
-                                quantity: item.quantity,
-                                unitPrice,
-                                total: unitPrice * item.quantity,
-                            };
-                        }),
-                    },
-                },
-                include: {
-                    user: true,
-                    address: true,
-                    items: {
-                        include: {
-                            variant: true,
-                            product: true,
-                        },
-                    },
-                },
-            });
-            // Decrement stock BEFORE clearing cart
-            for (const item of cartItems) {
-                await prisma_1.default.productVariant.update({
-                    where: { id: item.variantId },
-                    data: { stock: { decrement: item.quantity } },
-                });
-            }
-            // Clear cart AFTER stock update
-            await prisma_1.default.cart.deleteMany({ where: { userId } });
-            // Send email
-            try {
-                if (newOrder.address) {
-                    await (0, email_1.sendOrderConfirmation)({
-                        to: newOrder.user.email,
-                        customerName: newOrder.user.name,
-                        orderId: newOrder.id,
-                        items: newOrder.items.map(item => ({
-                            productName: item.product.name,
-                            color: item.variant.color,
-                            size: item.variant.size,
-                            quantity: item.quantity,
-                            unitPrice: Number(item.unitPrice),
-                        })),
-                        subtotal,
-                        shipping,
-                        total,
-                        address: {
-                            fullName: newOrder.address.fullName,
-                            street: newOrder.address.street,
-                            city: newOrder.address.city,
-                            province: newOrder.address.province,
-                            postalCode: newOrder.address.postalCode,
-                            country: newOrder.address.country,
-                        },
-                    });
-                }
-            }
-            catch (emailErr) {
-                console.error('Email send failed:', emailErr);
-            }
         }
         catch (err) {
-            console.error('Webhook error:', err);
+            console.error('Webhook fulfillment error:', err);
         }
     }
     res.sendStatus(200);
@@ -200,6 +210,9 @@ const verifyPayment = async (req, res) => {
     try {
         const reference = req.params.reference;
         const userId = req.user?.id;
+        if (!userId)
+            return res.status(401).json({ message: 'Unauthorized' });
+        // Verify with Paystack
         const options = {
             hostname: 'api.paystack.co',
             port: 443,
@@ -221,57 +234,26 @@ const verifyPayment = async (req, res) => {
         if (!paystackRes.data || paystackRes.data.status !== 'success') {
             return res.status(400).json({ message: 'Payment not successful' });
         }
-        if (!userId)
-            return res.status(401).json({ message: 'Unauthorized' });
-        let order = await prisma_1.default.order.findFirst({
-            where: { paystackReference: reference },
-        });
-        if (order) {
-            return res.json({ orderId: order.id });
-        }
         const { metadata, amount } = paystackRes.data;
         const { addressId } = metadata;
-        const cartItems = await prisma_1.default.cart.findMany({
-            where: { userId },
-            include: { variant: true, product: true },
+        // Try to fulfill — if webhook already did it, returns existing order
+        const order = await fulfillOrder({
+            userId,
+            addressId,
+            reference,
+            amountInCents: amount,
+            sendEmail: false, // webhook handles email — avoid double sending
         });
-        if (cartItems.length === 0) {
-            order = await prisma_1.default.order.findFirst({ where: { paystackReference: reference } });
-            if (!order)
+        if (!order) {
+            // Wait briefly for webhook then retry
+            await new Promise(r => setTimeout(r, 2000));
+            const retryOrder = await prisma_1.default.order.findFirst({
+                where: { paystackReference: reference },
+            });
+            if (!retryOrder)
                 return res.status(404).json({ message: 'Order not found' });
-            return res.json({ orderId: order.id });
+            return res.json({ orderId: retryOrder.id });
         }
-        const subtotal = cartItems.reduce((sum, item) => {
-            const price = Number(item.variant.salePrice ?? item.variant.price);
-            return sum + price * item.quantity;
-        }, 0);
-        const shipping = subtotal >= 1000 ? 0 : 100;
-        const total = amount / 100;
-        order = await prisma_1.default.order.create({
-            data: {
-                userId,
-                addressId,
-                status: 'CONFIRMED',
-                subtotal,
-                shippingCost: shipping,
-                discount: 0,
-                total,
-                paystackReference: reference,
-                items: {
-                    create: cartItems.map(item => {
-                        const unitPrice = Number(item.variant.salePrice ?? item.variant.price);
-                        return {
-                            variantId: item.variantId,
-                            productId: item.productId,
-                            quantity: item.quantity,
-                            unitPrice,
-                            total: unitPrice * item.quantity,
-                        };
-                    }),
-                },
-            },
-        });
-        await prisma_1.default.cart.deleteMany({ where: { userId } });
         res.json({ orderId: order.id });
     }
     catch (err) {

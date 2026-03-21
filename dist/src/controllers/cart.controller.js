@@ -102,10 +102,9 @@ const mergeCart = async (req, res) => {
                 where: { userId_variantId: { userId, variantId: item.variantId } },
             });
             if (existing) {
-                // Add guest quantity to existing cart quantity
                 await prisma_1.default.cart.update({
                     where: { userId_variantId: { userId, variantId: item.variantId } },
-                    data: { quantity: existing.quantity + item.quantity },
+                    data: { quantity: { increment: item.quantity } },
                 });
             }
             else {
