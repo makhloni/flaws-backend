@@ -161,7 +161,7 @@ export async function sendOrderStatusUpdate(params: {
 
   try {
     const result = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'FLAWS <onboarding@resend.dev>',
+      from: 'FLAWS <${process.env.RESEND_FROM_EMAIL}>',
       to: params.to,
       subject: `Order Update — #${params.orderId.slice(0, 8).toUpperCase()}`,
       html: '<p>Test</p>',
