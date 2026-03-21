@@ -120,6 +120,8 @@ async function sendOrderConfirmation(params) {
     });
 }
 async function sendOrderStatusUpdate(params) {
+    console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
+    console.log('Sending to:', params.to);
     const { to, customerName, orderId, status, trackingNumber } = params;
     const orderRef = orderId.slice(0, 8).toUpperCase();
     const statusMessages = {

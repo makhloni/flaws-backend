@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+
 interface OrderItem {
   productName: string
   color: string
@@ -154,8 +155,12 @@ export async function sendOrderStatusUpdate(params: {
   status: string
   trackingNumber?: string
 }) {
+
+   console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY)
+  console.log('Sending to:', params.to)
   const { to, customerName, orderId, status, trackingNumber } = params
   const orderRef = orderId.slice(0, 8).toUpperCase()
+
 
   const statusMessages: Record<string, { title: string; message: string; color: string }> = {
     CONFIRMED: {
