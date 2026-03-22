@@ -1,7 +1,12 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY)
+}
 
+function getFrom() {
+  return `FLAWS <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`
+}
 
 interface OrderItem {
   productName: string
@@ -31,7 +36,6 @@ interface SendOrderConfirmationParams {
 
 export async function sendOrderConfirmation(params: SendOrderConfirmationParams) {
   const { to, customerName, orderId, items, subtotal, shipping, total, address } = params
-
   const orderRef = orderId.slice(0, 8).toUpperCase()
 
   const itemRows = items.map(item => `
@@ -61,27 +65,19 @@ export async function sendOrderConfirmation(params: SendOrderConfirmationParams)
       <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
 
         <div style="text-align:center;margin-bottom:40px;">
-          <h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:0.4em;text-transform:uppercase;color:#ffffff;">
-            FLAWS
-          </h1>
+          <h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:0.4em;text-transform:uppercase;color:#ffffff;">FLAWS</h1>
         </div>
 
         <div style="border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:24px 0;margin-bottom:32px;text-align:center;">
-          <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#888888;">
-            Order Confirmed
-          </p>
+          <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#888888;">Order Confirmed</p>
           <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff;">
             Thank you, ${customerName.split(' ')[0]}
           </p>
-          <p style="margin:8px 0 0;font-size:12px;color:#888888;letter-spacing:0.1em;">
-            Order #${orderRef}
-          </p>
+          <p style="margin:8px 0 0;font-size:12px;color:#888888;letter-spacing:0.1em;">Order #${orderRef}</p>
         </div>
 
         <div style="margin-bottom:32px;">
-          <p style="margin:0 0 16px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#888888;">
-            Your Order
-          </p>
+          <p style="margin:0 0 16px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#888888;">Your Order</p>
           <table style="width:100%;border-collapse:collapse;">
             <tbody>${itemRows}</tbody>
           </table>
@@ -107,9 +103,7 @@ export async function sendOrderConfirmation(params: SendOrderConfirmationParams)
         </div>
 
         <div style="background:#111111;border:1px solid #1a1a1a;padding:20px;margin-bottom:32px;">
-          <p style="margin:0 0 12px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#888888;">
-            Delivery Address
-          </p>
+          <p style="margin:0 0 12px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#888888;">Delivery Address</p>
           <p style="margin:0;font-size:13px;color:#cccccc;line-height:1.8;">
             ${address.fullName}<br/>
             ${address.street}<br/>
@@ -127,12 +121,8 @@ export async function sendOrderConfirmation(params: SendOrderConfirmationParams)
         </div>
 
         <div style="border-top:1px solid #1a1a1a;padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#555555;letter-spacing:0.1em;">
-            © 2026 FLAWS. South Africa.
-          </p>
-          <p style="margin:8px 0 0;font-size:11px;color:#555555;">
-            Questions? Reply to this email or contact us.
-          </p>
+          <p style="margin:0;font-size:11px;color:#555555;letter-spacing:0.1em;">© 2026 FLAWS. South Africa.</p>
+          <p style="margin:8px 0 0;font-size:11px;color:#555555;">Questions? Reply to this email or contact us.</p>
         </div>
 
       </div>
@@ -140,8 +130,8 @@ export async function sendOrderConfirmation(params: SendOrderConfirmationParams)
     </html>
   `
 
-  await resend.emails.send({
-    from: `FLAWS <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
+  await getResend().emails.send({
+    from: getFrom(),
     to,
     subject: `Order Confirmed — #${orderRef}`,
     html,
@@ -159,14 +149,40 @@ export async function sendOrderStatusUpdate(params: {
   const orderRef = orderId.slice(0, 8).toUpperCase()
 
   const statusMessages: Record<string, { title: string; message: string; color: string }> = {
-    CONFIRMED: { title: 'Order Confirmed', message: 'Your order has been confirmed and is being prepared.', color: '#4fc3f7' },
-    PROCESSING: { title: 'Order Being Processed', message: 'Your order is currently being processed and packed.', color: '#ce93d8' },
-    SHIPPED: { title: 'Order Shipped', message: trackingNumber ? `Your order is on its way. Tracking number: ${trackingNumber}` : 'Your order has been shipped and is on its way to you.', color: '#81c784' },
-    DELIVERED: { title: 'Order Delivered', message: 'Your order has been delivered. We hope you love it.', color: '#a5d6a7' },
-    CANCELLED: { title: 'Order Cancelled', message: 'Your order has been cancelled. If you paid, a refund will be processed within 5–10 business days.', color: '#ef9a9a' },
+    CONFIRMED: {
+      title: 'Order Confirmed',
+      message: 'Your order has been confirmed and is being prepared.',
+      color: '#4fc3f7',
+    },
+    PROCESSING: {
+      title: 'Order Being Processed',
+      message: 'Your order is currently being processed and packed.',
+      color: '#ce93d8',
+    },
+    SHIPPED: {
+      title: 'Order Shipped',
+      message: trackingNumber
+        ? `Your order is on its way. Tracking number: ${trackingNumber}`
+        : 'Your order has been shipped and is on its way to you.',
+      color: '#81c784',
+    },
+    DELIVERED: {
+      title: 'Order Delivered',
+      message: 'Your order has been delivered. We hope you love it.',
+      color: '#a5d6a7',
+    },
+    CANCELLED: {
+      title: 'Order Cancelled',
+      message: 'Your order has been cancelled. If you paid, a refund will be processed within 5–10 business days.',
+      color: '#ef9a9a',
+    },
   }
 
-  const info = statusMessages[status] || { title: `Order ${status}`, message: `Your order status has been updated to ${status}.`, color: '#888888' }
+  const info = statusMessages[status] || {
+    title: `Order ${status}`,
+    message: `Your order status has been updated to ${status}.`,
+    color: '#888888',
+  }
 
   const html = `
     <!DOCTYPE html>
@@ -174,9 +190,11 @@ export async function sendOrderStatusUpdate(params: {
     <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
     <body style="margin:0;padding:0;background-color:#0a0a0a;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
       <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+
         <div style="text-align:center;margin-bottom:40px;">
           <h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:0.4em;text-transform:uppercase;color:#ffffff;">FLAWS</h1>
         </div>
+
         <div style="border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:24px 0;margin-bottom:32px;text-align:center;">
           <div style="display:inline-block;padding:4px 16px;background:${info.color}22;border:1px solid ${info.color}44;margin-bottom:12px;">
             <span style="font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:${info.color};">${status}</span>
@@ -184,6 +202,7 @@ export async function sendOrderStatusUpdate(params: {
           <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff;">${info.title}</p>
           <p style="margin:8px 0 0;font-size:12px;color:#888888;letter-spacing:0.1em;">Order #${orderRef}</p>
         </div>
+
         <div style="background:#111111;border:1px solid #1a1a1a;padding:20px;margin-bottom:32px;">
           <p style="margin:0;font-size:14px;color:#cccccc;line-height:1.8;">
             Hi ${customerName.split(' ')[0]}, ${info.message}
@@ -195,29 +214,33 @@ export async function sendOrderStatusUpdate(params: {
           </div>
           ` : ''}
         </div>
+
         <div style="text-align:center;margin-bottom:40px;">
           <a href="${process.env.FRONTEND_URL}/orders/${orderId}"
              style="display:inline-block;padding:14px 40px;background:#ffffff;color:#0a0a0a;text-decoration:none;font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;">
             View Order
           </a>
         </div>
+
         <div style="border-top:1px solid #1a1a1a;padding-top:24px;text-align:center;">
           <p style="margin:0;font-size:11px;color:#555555;">© 2026 FLAWS. South Africa.</p>
-          <p style="margin:8px 0 0;font-size:11px;color:#555555;">Questions? <a href="mailto:support@flaws.co.za" style="color:#888;">support@flaws.co.za</a></p>
+          <p style="margin:8px 0 0;font-size:11px;color:#555555;">
+            Questions? <a href="mailto:support@flaws.co.za" style="color:#888;">support@flaws.co.za</a>
+          </p>
         </div>
+
       </div>
     </body>
     </html>
   `
 
-  await resend.emails.send({
-    from: `FLAWS <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
+  await getResend().emails.send({
+    from: getFrom(),
     to,
     subject: `${info.title} — Order #${orderRef}`,
     html,
   })
 }
-
 
 export async function sendAbandonedCart(params: {
   to: string
@@ -237,7 +260,10 @@ export async function sendAbandonedCart(params: {
     <tr>
       <td style="padding:12px 0;border-bottom:1px solid #1a1a1a;">
         <div style="display:flex;align-items:center;gap:12px;">
-          ${item.image ? `<img src="${item.image}" style="width:50px;height:65px;object-fit:cover;background:#111;" />` : '<div style="width:50px;height:65px;background:#111;"></div>'}
+          ${item.image
+            ? `<img src="${item.image}" style="width:50px;height:65px;object-fit:cover;background:#111;" />`
+            : '<div style="width:50px;height:65px;background:#111;flex-shrink:0;"></div>'
+          }
           <div>
             <p style="margin:0;font-size:13px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:#ffffff;">${item.productName}</p>
             <p style="margin:4px 0 0;font-size:12px;color:#888888;">${item.color} / ${item.size}</p>
@@ -261,9 +287,7 @@ export async function sendAbandonedCart(params: {
 
         <div style="border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:24px 0;margin-bottom:32px;text-align:center;">
           <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#888888;">You left something behind</p>
-          <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff;">
-            Your Cart Misses You
-          </p>
+          <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff;">Your Cart Misses You</p>
         </div>
 
         <p style="font-size:14px;color:#888888;line-height:1.8;margin-bottom:24px;">
@@ -276,9 +300,13 @@ export async function sendAbandonedCart(params: {
 
         ${items.length > 3 ? `<p style="font-size:12px;color:#555;margin-bottom:24px;">+ ${items.length - 3} more item${items.length - 3 > 1 ? 's' : ''} in your cart</p>` : ''}
 
-        <div style="border-top:1px solid #1a1a1a;padding-top:16px;margin-bottom:32px;display:flex;justify-content:space-between;">
-          <span style="font-size:14px;color:#888888;">Cart Total</span>
-          <span style="font-size:14px;font-weight:700;color:#ffffff;">R${cartTotal.toFixed(2)}</span>
+        <div style="border-top:1px solid #1a1a1a;padding-top:16px;margin-bottom:32px;">
+          <table style="width:100%;border-collapse:collapse;">
+            <tr>
+              <td style="font-size:14px;color:#888888;padding:8px 0;">Cart Total</td>
+              <td style="font-size:14px;font-weight:700;color:#ffffff;text-align:right;padding:8px 0;">R${cartTotal.toFixed(2)}</td>
+            </tr>
+          </table>
         </div>
 
         <div style="text-align:center;margin-bottom:40px;">
@@ -300,8 +328,8 @@ export async function sendAbandonedCart(params: {
     </html>
   `
 
-  await resend.emails.send({
-    from: `FLAWS <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
+  await getResend().emails.send({
+    from: getFrom(),
     to,
     subject: `You left something behind — Complete your FLAWS order`,
     html,
