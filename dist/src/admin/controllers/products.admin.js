@@ -63,14 +63,68 @@ async function getProducts(req, res) {
     `}
   </div>
 
-  <script>
-    function deleteProduct(id, name) {
-      if (!confirm('Delete "' + name + '"? This cannot be undone.')) return
-      fetch('/admin/products/' + id + '/delete', { method: 'POST' })
-        .then(() => { window.location.href = '/admin/products' })
-        .catch(() => { alert('Failed to delete product') })
-    }
-  </script>
+ <!-- Delete Confirmation Modal -->
+<div id="delete-modal" style="
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+">
+  <div style="
+    background:#111;border:1px solid #1a1a1a;
+    padding:2rem;width:100%;max-width:400px;margin:1rem;
+  ">
+    <p style="font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:#888;margin-bottom:0.75rem;">
+      Confirm Deletion
+    </p>
+    <p style="font-size:1rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#fff;margin-bottom:0.5rem;" id="delete-modal-name"></p>
+    <p style="font-size:0.75rem;color:#888;margin-bottom:2rem;line-height:1.6;">
+      This will permanently delete the product, all its variants and images. This cannot be undone.
+    </p>
+    <div style="display:flex;gap:0.75rem;">
+      <button
+        onclick="confirmDelete()"
+        style="flex:1;padding:0.9rem;background:#ff6b6b;border:none;color:#fff;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;cursor:pointer;font-family:inherit;"
+      >
+        Delete Product
+      </button>
+      <button
+        onclick="closeModal()"
+        style="flex:1;padding:0.9rem;background:none;border:1px solid #333;color:#888;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;font-family:inherit;"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let pendingDeleteId = null
+
+  function deleteProduct(id, name) {
+    pendingDeleteId = id
+    document.getElementById('delete-modal-name').textContent = name
+    const modal = document.getElementById('delete-modal')
+    modal.style.display = 'flex'
+  }
+
+  function closeModal() {
+    pendingDeleteId = null
+    document.getElementById('delete-modal').style.display = 'none'
+  }
+
+  function confirmDelete() {
+    if (!pendingDeleteId) return
+    fetch('/admin/products/' + pendingDeleteId + '/delete', { method: 'POST' })
+      .then(() => { window.location.href = '/admin/products' })
+      .catch(() => { alert('Failed to delete product') })
+    closeModal()
+  }
+
+  // Close on backdrop click
+  document.getElementById('delete-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal()
+  })
+</script>
 `;
     res.send((0, layout_1.layout)('Products', body, 'products'));
 }
