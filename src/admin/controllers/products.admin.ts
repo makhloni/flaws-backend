@@ -114,7 +114,7 @@ function confirmDelete() {
     })
     .catch(err => alert('Failed to delete: ' + err.message))
 }
-    
+
   // Close on backdrop click
   document.getElementById('delete-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal()
@@ -539,8 +539,12 @@ export async function deleteProduct(req: Request, res: Response) {
       include: { images: true },
     })
 
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' })
+    }
+
     // Delete images from Supabase storage
-    for (const image of product?.images || []) {
+    for (const image of product.images) {
       const fileName = image.url.split('/').pop()
       if (fileName) {
         await supabaseAdmin.storage
@@ -549,14 +553,14 @@ export async function deleteProduct(req: Request, res: Response) {
       }
     }
 
-    // Delete relations first
+    // Delete all relations in correct order
     await prisma.productImage.deleteMany({ where: { productId: id } })
-    await prisma.productVariant.deleteMany({ where: { productId: id } })
     await prisma.cart.deleteMany({ where: { productId: id } })
-
+    await prisma.orderItem.deleteMany({ where: { productId: id } })
+    await prisma.productVariant.deleteMany({ where: { productId: id } })
     await prisma.product.delete({ where: { id } })
 
-    await logActivity('PRODUCT_DELETED', 'Product', `Product "${product?.name || id}" deleted`, id)
+    await logActivity('PRODUCT_DELETED', 'Product', `Product "${product.name}" deleted`, id)
 
     res.json({ success: true })
   } catch (err: any) {
