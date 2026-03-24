@@ -533,6 +533,7 @@ export async function postEditProduct(req: Request, res: Response) {
 
 export async function deleteProduct(req: Request, res: Response) {
   const id = req.params.id as string
+  console.log('Delete requested for product id:', id)
   try {
     const product = await prisma.product.findUnique({
       where: { id },
