@@ -29,8 +29,8 @@ setTimeout(() => {
 }, 1000 * 60 * 2);
 app.use((0, cors_1.default)({
     origin: [
-        'https://flaws-backend-production.up.railway.app',
         'https://flaws-frontend.vercel.app',
+        'http://localhost:5173',
     ],
     credentials: true,
 }));

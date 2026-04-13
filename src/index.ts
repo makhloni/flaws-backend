@@ -30,8 +30,8 @@ setTimeout(() => {
 
 app.use(cors({
   origin: [
-    'https://flaws-backend-production.up.railway.app',
-    'https://flaws-frontend.vercel.app', 
+    'https://flaws-frontend.vercel.app',
+    'http://localhost:5173', 
   ],
   credentials: true,
 }))
