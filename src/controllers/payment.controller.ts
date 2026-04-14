@@ -154,6 +154,7 @@ export const initializePayment = async (req: Request, res: Response) => {
     const { addressId } = req.body
     const userId = req.user?.id
 
+    
     if (!userId) return res.status(401).json({ message: 'Unauthorized' })
     if (!addressId) return res.status(400).json({ message: 'Address required' })
 

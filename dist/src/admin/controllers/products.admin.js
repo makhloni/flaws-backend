@@ -43,7 +43,7 @@ async function getProducts(req, res) {
       <td>
         <div style="display:flex;gap:0.5rem;">
           <a href="/admin/products/${p.id}/edit" class="btn btn-sm btn-secondary">Edit</a>
-          <button type="button" data-id="${p.id}" data-name="${p.name.replace(/'/g, '&#39;')}" onclick="deleteProduct(this)" class="btn btn-sm btn-danger">Delete</button>
+          <button type="button" data-id="${p.id}" data-name="${p.name.replace(/'/g, '&#39;')}" class="btn btn-sm btn-danger delete-btn">Delete</button>
         </div>
       </td>
     </tr>
@@ -82,11 +82,11 @@ async function getProducts(req, res) {
     </p>
     <div style="display:flex;gap:0.75rem;">
       <button
-        onclick="confirmDelete()"
-        style="flex:1;padding:0.9rem;background:#ff6b6b;border:none;color:#fff;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;cursor:pointer;font-family:inherit;"
-      >
-        Delete Product
-      </button>
+  onclick="confirmDelete()"
+  style="flex:1;padding:0.9rem;background:#ff6b6b;border:none;color:#fff;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;cursor:pointer;font-family:inherit;"
+>
+  Delete Product
+</button>
       <button
         onclick="closeModal()"
         style="flex:1;padding:0.9rem;background:none;border:1px solid #333;color:#888;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;font-family:inherit;"
@@ -100,28 +100,31 @@ async function getProducts(req, res) {
 <script>
   let pendingDeleteId = null
 
-function deleteProduct(btn) {
-  pendingDeleteId = btn.getAttribute('data-id')
-  document.getElementById('delete-modal-name').textContent = btn.getAttribute('data-name')
-  document.getElementById('delete-modal').style.display = 'flex'
-}
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.delete-btn')
+    if (!btn) return
+    pendingDeleteId = btn.getAttribute('data-id')
+    document.getElementById('delete-modal-name').textContent = btn.getAttribute('data-name')
+    document.getElementById('delete-modal').style.display = 'flex'
+  })
+
   function closeModal() {
     pendingDeleteId = null
     document.getElementById('delete-modal').style.display = 'none'
   }
 
-function confirmDelete() {
-  if (!pendingDeleteId) return
-  closeModal()
-  fetch('/admin/products/' + pendingDeleteId + '/delete', { method: 'POST' })
-    .then(res => {
-      if (!res.ok) return res.json().then(d => { throw new Error(d.error) })
-      window.location.href = '/admin/products'
-    })
-    .catch(err => alert('Failed to delete: ' + err.message))
-}
+  function confirmDelete() {
+    if (!pendingDeleteId) return
+    const id = pendingDeleteId
+    closeModal()
+    fetch('/admin/products/' + id + '/delete', { method: 'POST' })
+      .then(res => {
+        if (!res.ok) return res.json().then(d => { throw new Error(d.error) })
+        window.location.href = '/admin/products'
+      })
+      .catch(err => alert('Failed to delete: ' + err.message))
+  }
 
-  // Close on backdrop click
   document.getElementById('delete-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal()
   })
