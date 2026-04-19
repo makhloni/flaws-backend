@@ -50,5 +50,6 @@ router.get('/activity', activity_admin_1.getActivityLog);
 router.get('/homepage', homepage_admin_1.getHomepage);
 router.post('/homepage', homepage_admin_1.postHomepage);
 router.get('/waitlist', waitlist_admin_1.adminGetWaitlist);
+router.post('/waitlist/toggle', waitlist_admin_1.adminToggleWaitlistMode);
 router.get('/waitlist/export', waitlist_admin_1.adminExportWaitlistCSV);
 exports.default = router;
