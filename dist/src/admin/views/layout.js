@@ -119,6 +119,7 @@ function layout(title, body, activePage = '') {
     <div class="nav-section">Commerce</div>
     <a href="/admin/orders" class="nav-link ${activePage === 'orders' ? 'active' : ''}">Orders</a>
     <a href="/admin/users" class="nav-link ${activePage === 'users' ? 'active' : ''}">Users</a>
+    <a href="/admin/waitlist" class="nav-link ${activePage === 'waitlist' ? 'active' : ''}">Waitlist</a>
     <div class="nav-section">Content</div>
     <a href="/admin/homepage" class="nav-link ${activePage === 'homepage' ? 'active' : ''}">Homepage</a>
     <a href="/admin/activity" class="nav-link ${activePage === 'activity' ? 'active' : ''}">Activity Log</a>
