@@ -148,15 +148,15 @@ export function layout(title: string, body: string, activePage = '') {
       .form-grid-3 { grid-template-columns: 1fr; }
       .stat-value { font-size: 1.4rem; }
       /* Stack 2-col grids on mobile */
-div[style*="grid-template-columns:1fr 320px"],
-div[style*="grid-template-columns:1fr 380px"],
-div[style*="grid-template-columns:1fr 2fr"],
-div[style*="grid-template-columns:1fr 1fr"],
-div[style*="grid-template-columns: 1fr 320px"],
-div[style*="grid-template-columns: 1fr 380px"],
-div[style*="grid-template-columns: 1fr 2fr"],
-div[style*="grid-template-columns: 1fr 1fr"] {
-  grid-template-columns: 1fr !important;
+      div[style*="grid-template-columns:1fr 320px"],
+      div[style*="grid-template-columns:1fr 380px"],
+      div[style*="grid-template-columns:1fr 2fr"],
+      div[style*="grid-template-columns:1fr 1fr"],
+      div[style*="grid-template-columns: 1fr 320px"],
+      div[style*="grid-template-columns: 1fr 380px"],
+      div[style*="grid-template-columns: 1fr 2fr"],
+      div[style*="grid-template-columns: 1fr 1fr"] {
+      grid-template-columns: 1fr !important;
 }
       /* Wrap alert cards */
       div[style*="display:flex;gap:1rem;flex-wrap:wrap"] {
@@ -169,6 +169,23 @@ div[style*="grid-template-columns: 1fr 1fr"] {
       .page-title { font-size: 1rem; }
       td, th { padding: 0.6rem 0.5rem; font-size: 0.72rem; }
     }
+
+    /* ── Mobile table readability ── */
+    @media (max-width: 768px) {
+
+      /* Recent Orders: hide Order ID and Date columns */
+      .mobile-hide { display: none !important; }
+
+      /* Bigger touch targets on table rows */
+      td { padding: 0.85rem 0.6rem; font-size: 0.8rem; }
+      th { padding: 0.6rem 0.6rem; font-size: 0.58rem; }
+
+      /* Badges slightly bigger */
+      .badge { font-size: 0.6rem; padding: 4px 8px; }
+
+      /* Buttons in tables full-touch */
+      .btn-sm { padding: 0.5rem 0.75rem; font-size: 0.6rem; }
+}
   </style>
 </head>
 <body>
