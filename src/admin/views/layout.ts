@@ -148,12 +148,16 @@ export function layout(title: string, body: string, activePage = '') {
       .form-grid-3 { grid-template-columns: 1fr; }
       .stat-value { font-size: 1.4rem; }
       /* Stack 2-col grids on mobile */
-      div[style*="grid-template-columns:1fr 320px"],
-      div[style*="grid-template-columns:1fr 380px"],
-      div[style*="grid-template-columns:1fr 2fr"],
-      div[style*="grid-template-columns:1fr 1fr"] {
-        grid-template-columns: 1fr !important;
-      }
+div[style*="grid-template-columns:1fr 320px"],
+div[style*="grid-template-columns:1fr 380px"],
+div[style*="grid-template-columns:1fr 2fr"],
+div[style*="grid-template-columns:1fr 1fr"],
+div[style*="grid-template-columns: 1fr 320px"],
+div[style*="grid-template-columns: 1fr 380px"],
+div[style*="grid-template-columns: 1fr 2fr"],
+div[style*="grid-template-columns: 1fr 1fr"] {
+  grid-template-columns: 1fr !important;
+}
       /* Wrap alert cards */
       div[style*="display:flex;gap:1rem;flex-wrap:wrap"] {
         flex-direction: column;
