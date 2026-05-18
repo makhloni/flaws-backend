@@ -390,7 +390,7 @@ export async function getDashboard(req: Request, res: Response) {
         const img = detail?.images[0]?.url
         return `
           <tr>
-            <td style="color:#555;font-size:0.7rem;width:24px;">${i + 1}</td>
+            <td class="mobile-hide" style="color:#555;font-size:0.7rem;width:24px;">${i + 1}</td>
             <td>
               <div style="display:flex;align-items:center;gap:0.75rem;">
                 ${img
@@ -401,7 +401,7 @@ export async function getDashboard(req: Request, res: Response) {
             </td>
             <td style="color:#888;">${p._sum.quantity || 0} units</td>
             <td style="font-weight:600;">R${Number(p._sum.total || 0).toFixed(2)}</td>
-            <td><a href="/admin/products/${p.productId}/edit" class="btn btn-sm btn-secondary">Edit</a></td>
+            <td class="mobile-hide" ><a href="/admin/products/${p.productId}/edit" class="btn btn-sm btn-secondary">Edit</a></td>
           </tr>
         `
       }).join('')
@@ -413,17 +413,17 @@ export async function getDashboard(req: Request, res: Response) {
           <td><strong>${v.product.name}</strong></td>
           <td style="color:#888;">${v.color} / ${v.size}</td>
           <td><span style="display:inline-block;padding:3px 10px;font-size:0.6rem;letter-spacing:0.1em;font-weight:600;background:#1a0a00;color:#ffb347;border:1px solid #ffb34733;">${v.stock} left</span></td>
-          <td><a href="/admin/products/${v.productId}/edit" class="btn btn-sm btn-secondary">Restock</a></td>
+          <td class="mobile-hide"><a href="/admin/products/${v.productId}/edit" class="btn btn-sm btn-secondary">Restock</a></td>
         </tr>
       `).join('')
 
   const recentRows = recentOrders.map(o => `
     <tr>
-      <td style="color:#888;font-size:0.7rem;">#${o.id.slice(0, 8).toUpperCase()}</td>
+      <td class="mobile-hide" style="color:#888;font-size:0.7rem;">#${o.id.slice(0,8).toUpperCase()}</td>
       <td>${o.user.name}</td>
       <td>R${Number(o.total).toFixed(2)}</td>
       <td><span class="badge badge-${o.status.toLowerCase()}">${o.status}</span></td>
-      <td style="color:#888;font-size:0.7rem;">${new Date(o.createdAt).toLocaleDateString('en-ZA')}</td>
+      <td class="mobile-hide" style="color:#888;font-size:0.7rem;">${new Date(o.createdAt).toLocaleDateString('en-ZA')}</td>
       <td><a href="/admin/orders/${o.id}" class="btn btn-sm btn-secondary">View</a></td>
     </tr>
   `).join('')
@@ -499,7 +499,7 @@ export async function getDashboard(req: Request, res: Response) {
           <a href="/admin/products" class="btn btn-sm btn-secondary">All Products</a>
         </div>
         <table>
-          <thead><tr><th>#</th><th>Product</th><th>Units</th><th>Revenue</th><th></th></tr></thead>
+          <thead><tr><th class="mobile-hide" >#</th><th>Product</th><th>Units</th><th>Revenue</th><th></th></tr></thead>
           <tbody>${topProductRows}</tbody>
         </table>
       </div>
@@ -513,7 +513,7 @@ export async function getDashboard(req: Request, res: Response) {
         </div>
         ${recentOrders.length === 0 ? '<div class="empty-state">No orders yet</div>' : `
           <table>
-            <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th><th></th></tr></thead>
+            <thead><tr><th class="mobile-hide">Order</th><th>Customer</th><th>Total</th><th>Status</th><th class="mobile-hide">Date</th><th></th></tr></thead>
             <tbody>${recentRows}</tbody>
           </table>
         `}
@@ -527,7 +527,7 @@ export async function getDashboard(req: Request, res: Response) {
           <a href="/admin/products" class="btn btn-sm btn-secondary">All Products</a>
         </div>
         <table>
-          <thead><tr><th>Product</th><th>Variant</th><th>Stock</th><th></th></tr></thead>
+          <thead><tr><th>Product</th><th>Variant</th><th>Stock</th><th class="mobile-hide"></th></tr></thead>
           <tbody>${lowStockRows}</tbody>
         </table>
       </div>
