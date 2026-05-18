@@ -11,11 +11,12 @@ export function layout(title: string, body: string, activePage = '') {
     a { color: inherit; text-decoration: none; }
     input, select, textarea, button { font-family: inherit; }
 
+    /* ── Sidebar ── */
     .sidebar {
       position: fixed; top: 0; left: 0; bottom: 0;
       width: 220px; background: #0f0f0f; border-right: 1px solid #1a1a1a;
       display: flex; flex-direction: column; padding: 2rem 0;
-      z-index: 100;
+      z-index: 200; transition: transform 0.3s ease;
     }
     .sidebar-logo {
       font-size: 1rem; font-weight: 900; letter-spacing: 0.4em;
@@ -40,6 +41,33 @@ export function layout(title: string, body: string, activePage = '') {
     }
     .logout-btn:hover { border-color: #fff; color: #fff; }
 
+    /* ── Mobile top bar ── */
+    .mobile-topbar {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0; height: 56px;
+      background: #0f0f0f; border-bottom: 1px solid #1a1a1a;
+      align-items: center; justify-content: space-between;
+      padding: 0 1.25rem; z-index: 300;
+    }
+    .mobile-topbar-logo { font-size: 0.9rem; font-weight: 900; letter-spacing: 0.4em; text-transform: uppercase; }
+    .hamburger {
+      background: none; border: none; cursor: pointer;
+      display: flex; flex-direction: column; gap: 5px; padding: 4px;
+    }
+    .hamburger span { display: block; width: 22px; height: 1px; background: #fff; transition: all 0.3s; }
+    .hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+    /* ── Overlay ── */
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); z-index: 150;
+      backdrop-filter: blur(2px);
+    }
+    .sidebar-overlay.visible { display: block; }
+
+    /* ── Main content ── */
     .main { margin-left: 220px; min-height: 100vh; }
     .topbar {
       height: 60px; border-bottom: 1px solid #1a1a1a;
@@ -50,13 +78,14 @@ export function layout(title: string, body: string, activePage = '') {
     .topbar-title { font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; }
     .content { padding: 2rem; }
 
+    /* ── Components ── */
     .card { background: #111; border: 1px solid #1a1a1a; padding: 1.5rem; }
     .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
     .stat-label { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: #888; margin-bottom: 0.5rem; }
     .stat-value { font-size: 1.75rem; font-weight: 700; }
     .stat-sub { font-size: 0.7rem; color: #888; margin-top: 0.25rem; }
 
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
     .page-title { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
 
     .btn { display: inline-block; padding: 0.75rem 1.5rem; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
@@ -72,6 +101,9 @@ export function layout(title: string, body: string, activePage = '') {
     th { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: #888; padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #1a1a1a; }
     td { font-size: 0.8rem; padding: 1rem; border-bottom: 1px solid #111; vertical-align: middle; }
     tr:hover td { background: #111; }
+
+    /* Mobile table scroll */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
     .badge { display: inline-block; padding: 3px 10px; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; }
     .badge-pending { background: #2a2a00; color: #ffeb3b; }
@@ -97,15 +129,59 @@ export function layout(title: string, body: string, activePage = '') {
     .img-thumb { width: 48px; height: 48px; object-fit: cover; background: #1a1a1a; }
     .img-thumb-lg { width: 80px; height: 100px; object-fit: cover; background: #1a1a1a; }
 
-    .tabs { display: flex; gap: 0; border-bottom: 1px solid #1a1a1a; margin-bottom: 2rem; }
-    .tab { padding: 0.75rem 1.5rem; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #888; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; border-top: none; border-left: none; border-right: none; }
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid #1a1a1a; margin-bottom: 2rem; overflow-x: auto; }
+    .tab { padding: 0.75rem 1.5rem; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #888; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; border-top: none; border-left: none; border-right: none; white-space: nowrap; }
     .tab.active { color: #fff; border-bottom-color: #fff; }
 
     .empty-state { text-align: center; padding: 4rem; color: #888; font-size: 0.75rem; letter-spacing: 0.15em; text-transform: uppercase; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .mobile-topbar { display: flex; }
+      .sidebar { transform: translateX(-100%); top: 56px; }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; padding-top: 56px; }
+      .topbar { display: none; }
+      .content { padding: 1.25rem; }
+      .card-grid { grid-template-columns: 1fr 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-grid-3 { grid-template-columns: 1fr; }
+      .stat-value { font-size: 1.4rem; }
+      /* Stack 2-col grids on mobile */
+      div[style*="grid-template-columns:1fr 320px"],
+      div[style*="grid-template-columns:1fr 380px"],
+      div[style*="grid-template-columns:1fr 2fr"],
+      div[style*="grid-template-columns:1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+      }
+      /* Wrap alert cards */
+      div[style*="display:flex;gap:1rem;flex-wrap:wrap"] {
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .card-grid { grid-template-columns: 1fr; }
+      .page-title { font-size: 1rem; }
+      td, th { padding: 0.6rem 0.5rem; font-size: 0.72rem; }
+    }
   </style>
 </head>
 <body>
-  <div class="sidebar">
+
+  <!-- Mobile top bar -->
+  <div class="mobile-topbar">
+    <span class="mobile-topbar-logo">FLAWS</span>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+
+  <!-- Overlay -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">FLAWS <span>Admin Panel</span></div>
     <div class="nav-section">Overview</div>
     <a href="/admin" class="nav-link ${activePage === 'dashboard' ? 'active' : ''}">Dashboard</a>
@@ -115,9 +191,9 @@ export function layout(title: string, body: string, activePage = '') {
     <div class="nav-section">Commerce</div>
     <a href="/admin/orders" class="nav-link ${activePage === 'orders' ? 'active' : ''}">Orders</a>
     <a href="/admin/users" class="nav-link ${activePage === 'users' ? 'active' : ''}">Users</a>
-    <a href="/admin/waitlist" class="nav-link ${activePage === 'waitlist' ? 'active' : ''}">Waitlist</a>
     <div class="nav-section">Content</div>
     <a href="/admin/homepage" class="nav-link ${activePage === 'homepage' ? 'active' : ''}">Homepage</a>
+    <a href="/admin/waitlist" class="nav-link ${activePage === 'waitlist' ? 'active' : ''}">Waitlist</a>
     <a href="/admin/activity" class="nav-link ${activePage === 'activity' ? 'active' : ''}">Activity Log</a>
     <div class="sidebar-footer">
       <form action="/admin/logout" method="POST">
@@ -125,12 +201,56 @@ export function layout(title: string, body: string, activePage = '') {
       </form>
     </div>
   </div>
+
+  <!-- Main -->
   <div class="main">
     <div class="topbar">
       <span class="topbar-title">${title}</span>
     </div>
-    <div class="content">${body}</div>
+    <div class="content">
+      ${body}
+    </div>
   </div>
+
+  <!-- Wrap all tables for horizontal scroll on mobile -->
+  <script>
+    document.querySelectorAll('table').forEach(t => {
+      if (t.closest('.table-wrap')) return
+      const wrap = document.createElement('div')
+      wrap.className = 'table-wrap'
+      t.parentNode.insertBefore(wrap, t)
+      wrap.appendChild(t)
+    })
+
+    // Hamburger toggle
+    const hamburger = document.getElementById('hamburger')
+    const sidebar = document.getElementById('sidebar')
+    const overlay = document.getElementById('sidebar-overlay')
+
+    hamburger.addEventListener('click', () => {
+      const open = sidebar.classList.toggle('open')
+      hamburger.classList.toggle('open', open)
+      overlay.classList.toggle('visible', open)
+      document.body.style.overflow = open ? 'hidden' : ''
+    })
+
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('open')
+      hamburger.classList.remove('open')
+      overlay.classList.remove('visible')
+      document.body.style.overflow = ''
+    })
+
+    // Close sidebar on nav link click (mobile)
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        sidebar.classList.remove('open')
+        hamburger.classList.remove('open')
+        overlay.classList.remove('visible')
+        document.body.style.overflow = ''
+      })
+    })
+  </script>
 </body>
 </html>`
 }
@@ -144,7 +264,7 @@ export function loginLayout(body: string) {
   <title>Admin Login — FLAWS</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0a0a; color: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    body { background: #0a0a0a; color: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
     .form-input { width: 100%; padding: 0.9rem 1rem; background: #111; border: 1px solid #1a1a1a; color: #fff; font-size: 0.85rem; outline: none; margin-bottom: 1rem; font-family: inherit; }
     .form-label { display: block; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: #888; margin-bottom: 0.5rem; }
     .btn-primary { width: 100%; padding: 1rem; background: #fff; color: #0a0a0a; border: none; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 600; cursor: pointer; font-family: inherit; }
