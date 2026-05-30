@@ -8,6 +8,83 @@ function getFrom() {
   return `FLAWS <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`
 }
 
+// ─────────────────────────────────────────────
+// SHARED DESIGN SYSTEM
+// ─────────────────────────────────────────────
+const COLORS = {
+  bg: '#080808',
+  surface: '#0f0f0f',
+  border: '#1c1c1c',
+  borderAccent: '#3a0a0a',
+  crimson: '#8b1a1a',
+  crimsonLight: '#c0392b',
+  crimsonGlow: '#c0392b22',
+  white: '#ffffff',
+  muted: '#777777',
+  subtle: '#444444',
+  light: '#cccccc',
+}
+
+const flawsWordmark = `
+  <div style="text-align:center;padding:40px 0 32px;">
+    <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:0.55em;text-transform:uppercase;color:#ffffff;font-style:italic;">FLAWS</h1>
+    <div style="width:40px;height:1px;background:#8b1a1a;margin:16px auto 0;"></div>
+  </div>
+`
+
+const footer = `
+  <div style="padding:32px 0 0;text-align:center;border-top:1px solid ${COLORS.border};">
+    <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:13px;font-style:italic;color:${COLORS.subtle};letter-spacing:0.1em;">
+       FLAWS. South Africa.
+    </p>
+    <p style="margin:8px 0 0;font-size:11px;color:${COLORS.subtle};letter-spacing:0.05em;">
+      Questions? <a href="mailto:support@flaws.co.za" style="color:${COLORS.crimsonLight};text-decoration:none;">support@flaws.co.za</a>
+    </p>
+  </div>
+`
+
+function emailWrapper(content: string): string {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8"/>
+      <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+      <meta name="color-scheme" content="dark"/>
+    </head>
+    <body style="margin:0;padding:0;background-color:${COLORS.bg};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+      <div style="max-width:560px;margin:0 auto;padding:0 24px 48px;">
+        ${flawsWordmark}
+        ${content}
+        ${footer}
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// ─────────────────────────────────────────────
+// SECTION HEADER  (reusable)
+// ─────────────────────────────────────────────
+function sectionHeader(eyebrow: string, headline: string, sub?: string): string {
+  return `
+    <div style="text-align:center;padding:28px 0;margin-bottom:28px;border-top:1px solid ${COLORS.borderAccent};border-bottom:1px solid ${COLORS.borderAccent};position:relative;">
+      <p style="margin:0 0 10px;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:${COLORS.crimsonLight};">${eyebrow}</p>
+      <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:24px;font-style:italic;font-weight:400;letter-spacing:0.06em;color:${COLORS.white};">${headline}</p>
+      ${sub ? `<p style="margin:10px 0 0;font-size:12px;color:${COLORS.muted};letter-spacing:0.12em;text-transform:uppercase;">${sub}</p>` : ''}
+    </div>
+  `
+}
+
+// ─────────────────────────────────────────────
+// DIVIDER
+// ─────────────────────────────────────────────
+const crimsonDivider = `
+  <div style="width:80px;height:1px;background:#8b1a1a;margin:24px auto;"></div>
+`
+// ─────────────────────────────────────────────
+// INTERFACES
+// ─────────────────────────────────────────────
 interface OrderItem {
   productName: string
   color: string
@@ -34,93 +111,88 @@ interface SendOrderConfirmationParams {
   }
 }
 
+// ─────────────────────────────────────────────
+// 1. ORDER CONFIRMATION
+// ─────────────────────────────────────────────
 export async function sendOrderConfirmation(params: SendOrderConfirmationParams) {
   const { to, customerName, orderId, items, subtotal, shipping, total, address } = params
   const orderRef = orderId.slice(0, 8).toUpperCase()
+  const firstName = customerName.split(' ')[0]
 
   const itemRows = items.map(item => `
     <tr>
-      <td style="padding:12px 0;border-bottom:1px solid #1a1a1a;">
-        <p style="margin:0;font-size:13px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:#ffffff;">
+      <td style="padding:14px 0;border-bottom:1px solid ${COLORS.border};">
+        <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:13px;font-style:italic;color:${COLORS.white};letter-spacing:0.03em;">
           ${item.productName}
         </p>
-        <p style="margin:4px 0 0;font-size:12px;color:#888888;">
-          ${item.color} / ${item.size} × ${item.quantity}
+        <p style="margin:4px 0 0;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:${COLORS.muted};">
+          ${item.color} &nbsp;/&nbsp; ${item.size} &nbsp;×&nbsp; ${item.quantity}
         </p>
       </td>
-      <td style="padding:12px 0;border-bottom:1px solid #1a1a1a;text-align:right;font-size:13px;color:#888888;">
+      <td style="padding:14px 0;border-bottom:1px solid ${COLORS.border};text-align:right;font-size:13px;color:${COLORS.light};letter-spacing:0.05em;">
         R${(item.unitPrice * item.quantity).toFixed(2)}
       </td>
     </tr>
   `).join('')
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8"/>
-      <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-    </head>
-    <body style="margin:0;padding:0;background-color:#0a0a0a;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-      <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
-        <div style="text-align:center;margin-bottom:40px;">
-          <h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:0.4em;text-transform:uppercase;color:#ffffff;">FLAWS</h1>
-        </div>
-        <div style="border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:24px 0;margin-bottom:32px;text-align:center;">
-          <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#888888;">Order Confirmed</p>
-          <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff;">
-            Thank you, ${customerName.split(' ')[0]}
-          </p>
-          <p style="margin:8px 0 0;font-size:12px;color:#888888;letter-spacing:0.1em;">Order #${orderRef}</p>
-        </div>
-        <div style="margin-bottom:32px;">
-          <p style="margin:0 0 16px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#888888;">Your Order</p>
-          <table style="width:100%;border-collapse:collapse;">
-            <tbody>${itemRows}</tbody>
-          </table>
-        </div>
-        <div style="border-top:1px solid #1a1a1a;padding-top:16px;margin-bottom:32px;">
-          <table style="width:100%;border-collapse:collapse;">
-            <tr>
-              <td style="padding:6px 0;font-size:13px;color:#888888;">Subtotal</td>
-              <td style="padding:6px 0;font-size:13px;color:#888888;text-align:right;">R${subtotal.toFixed(2)}</td>
-            </tr>
-            <tr>
-              <td style="padding:6px 0;font-size:13px;color:#888888;">Shipping</td>
-              <td style="padding:6px 0;font-size:13px;color:#888888;text-align:right;">
-                ${shipping === 0 ? 'Free' : `R${shipping.toFixed(2)}`}
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:12px 0 0;font-size:15px;font-weight:700;color:#ffffff;">Total</td>
-              <td style="padding:12px 0 0;font-size:15px;font-weight:700;color:#ffffff;text-align:right;">R${total.toFixed(2)}</td>
-            </tr>
-          </table>
-        </div>
-        <div style="background:#111111;border:1px solid #1a1a1a;padding:20px;margin-bottom:32px;">
-          <p style="margin:0 0 12px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#888888;">Delivery Address</p>
-          <p style="margin:0;font-size:13px;color:#cccccc;line-height:1.8;">
-            ${address.fullName}<br/>
-            ${address.street}<br/>
-            ${address.city}, ${address.province}<br/>
-            ${address.postalCode}<br/>
-            ${address.country}
-          </p>
-        </div>
-        <div style="text-align:center;margin-bottom:40px;">
-          <a href="${process.env.FRONTEND_URL}/orders/${orderId}"
-             style="display:inline-block;padding:14px 40px;background:#ffffff;color:#0a0a0a;text-decoration:none;font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;">
-            Track Your Order
-          </a>
-        </div>
-        <div style="border-top:1px solid #1a1a1a;padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#555555;letter-spacing:0.1em;">© 2026 FLAWS. South Africa.</p>
-          <p style="margin:8px 0 0;font-size:11px;color:#555555;">Questions? Reply to this email or contact us.</p>
-        </div>
+  const content = `
+    ${sectionHeader('Order Confirmed', `Thank you, ${firstName}`, `Order #${orderRef}`)}
+
+    <p style="font-size:13px;color:${COLORS.muted};line-height:1.9;margin:0 0 28px;letter-spacing:0.03em;">
+      We've received your order and it's being prepared with care. You'll receive a shipping update as soon as it's on its way.
+    </p>
+
+    <!-- ORDER ITEMS -->
+    <div style="margin-bottom:24px;">
+      <p style="margin:0 0 4px;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:${COLORS.crimsonLight};">Your Order</p>
+      <table style="width:100%;border-collapse:collapse;">
+        <tbody>${itemRows}</tbody>
+      </table>
+    </div>
+
+    <!-- TOTALS -->
+    <div style="background:${COLORS.surface};border:1px solid ${COLORS.border};padding:16px 20px;margin-bottom:28px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:5px 0;font-size:12px;color:${COLORS.muted};letter-spacing:0.08em;">Subtotal</td>
+          <td style="padding:5px 0;font-size:12px;color:${COLORS.muted};text-align:right;">R${subtotal.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 0;font-size:12px;color:${COLORS.muted};letter-spacing:0.08em;">Shipping</td>
+          <td style="padding:5px 0;font-size:12px;color:${COLORS.muted};text-align:right;">${shipping === 0 ? 'Free' : `R${shipping.toFixed(2)}`}</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 0 0;font-size:14px;font-weight:600;color:${COLORS.white};letter-spacing:0.08em;border-top:1px solid ${COLORS.border};">Total</td>
+          <td style="padding:12px 0 0;font-size:14px;font-weight:600;color:${COLORS.white};text-align:right;border-top:1px solid ${COLORS.border};">R${total.toFixed(2)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- DELIVERY -->
+    <div style="margin-bottom:32px;">
+      <p style="margin:0 0 12px;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:${COLORS.crimsonLight};">Delivery Address</p>
+      <div style="border-left:2px solid ${COLORS.crimson};padding-left:16px;">
+        <p style="margin:0;font-size:13px;color:${COLORS.light};line-height:2;">
+          ${address.fullName}<br/>
+          ${address.street}<br/>
+          ${address.city}, ${address.province} ${address.postalCode}<br/>
+          ${address.country}
+        </p>
       </div>
-    </body>
-    </html>
+    </div>
+
+    ${crimsonDivider}
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-bottom:8px;">
+      <a href="${process.env.FRONTEND_URL}/orders/${orderId}"
+         style="display:inline-block;padding:14px 48px;background:transparent;color:${COLORS.white};text-decoration:none;font-size:10px;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;border:1px solid ${COLORS.crimson};">
+        Track Your Order
+      </a>
+    </div>
   `
+
+  const html = emailWrapper(content)
 
   try {
     const result = await getResend().emails.send({
@@ -134,9 +206,11 @@ export async function sendOrderConfirmation(params: SendOrderConfirmationParams)
     console.error('❌ sendOrderConfirmation failed:', err)
     throw err
   }
-
 }
 
+// ─────────────────────────────────────────────
+// 2. ORDER STATUS UPDATE
+// ─────────────────────────────────────────────
 export async function sendOrderStatusUpdate(params: {
   to: string
   customerName: string
@@ -146,101 +220,82 @@ export async function sendOrderStatusUpdate(params: {
 }) {
   const { to, customerName, orderId, status, trackingNumber } = params
   const orderRef = orderId.slice(0, 8).toUpperCase()
+  const firstName = customerName.split(' ')[0]
 
-  const statusMessages: Record<string, { title: string; message: string; color: string }> = {
+  const statusConfig: Record<string, { eyebrow: string; headline: string; message: string }> = {
     CONFIRMED: {
-      title: 'Order Confirmed',
-      message: 'Your order has been confirmed and is being prepared.',
-      color: '#4fc3f7',
+      eyebrow: 'Status Update',
+      headline: 'Order Confirmed',
+      message: 'Your order has been confirmed and is now being prepared.',
     },
     PROCESSING: {
-      title: 'Order Being Processed',
-      message: 'Your order is currently being processed and packed.',
-      color: '#ce93d8',
+      eyebrow: 'Status Update',
+      headline: 'Being Prepared',
+      message: 'Your order is being carefully processed and packed.',
     },
     SHIPPED: {
-      title: 'Order Shipped',
+      eyebrow: 'On Its Way',
+      headline: 'Order Shipped',
       message: trackingNumber
-        ? `Your order is on its way. Tracking number: ${trackingNumber}`
-        : 'Your order has been shipped and is on its way to you.',
-      color: '#81c784',
+        ? `Your order is en route. Use the tracking number below to follow its journey.`
+        : 'Your order has left us and is on its way to you.',
     },
     DELIVERED: {
-      title: 'Order Delivered',
-      message: 'Your order has been delivered. We hope you love it.',
-      color: '#a5d6a7',
+      eyebrow: 'Delivered',
+      headline: `It's Arrived`,
+      message: 'Your order has been delivered. We hope it exceeds your expectations.',
     },
     CANCELLED: {
-      title: 'Order Cancelled',
-      message: 'Your order has been cancelled. If you paid, a refund will be processed within 5–10 business days.',
-      color: '#ef9a9a',
+      eyebrow: 'Order Update',
+      headline: 'Order Cancelled',
+      message: 'Your order has been cancelled. If payment was made, a refund will be processed within 5–10 business days.',
     },
   }
 
-  const info = statusMessages[status] || {
-    title: `Order ${status}`,
+  const info = statusConfig[status] || {
+    eyebrow: 'Status Update',
+    headline: `Order ${status}`,
     message: `Your order status has been updated to ${status}.`,
-    color: '#888888',
   }
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
-    <body style="margin:0;padding:0;background-color:#0a0a0a;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-      <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+  const content = `
+    ${sectionHeader(info.eyebrow, info.headline, `Order #${orderRef}`)}
 
-        <div style="text-align:center;margin-bottom:40px;">
-          <h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:0.4em;text-transform:uppercase;color:#ffffff;">FLAWS</h1>
+    <div style="background:${COLORS.surface};border:1px solid ${COLORS.border};border-left:2px solid ${COLORS.crimson};padding:20px 24px;margin-bottom:28px;">
+      <p style="margin:0;font-size:13px;color:${COLORS.light};line-height:1.9;">
+        Hi ${firstName}, ${info.message}
+      </p>
+      ${trackingNumber ? `
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid ${COLORS.border};">
+          <p style="margin:0 0 6px;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:${COLORS.crimsonLight};">Tracking Number</p>
+          <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:18px;font-style:italic;color:${COLORS.white};letter-spacing:0.1em;">${trackingNumber}</p>
         </div>
+      ` : ''}
+    </div>
 
-        <div style="border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:24px 0;margin-bottom:32px;text-align:center;">
-          <div style="display:inline-block;padding:4px 16px;background:${info.color}22;border:1px solid ${info.color}44;margin-bottom:12px;">
-            <span style="font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:${info.color};">${status}</span>
-          </div>
-          <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff;">${info.title}</p>
-          <p style="margin:8px 0 0;font-size:12px;color:#888888;letter-spacing:0.1em;">Order #${orderRef}</p>
-        </div>
+    ${crimsonDivider}
 
-        <div style="background:#111111;border:1px solid #1a1a1a;padding:20px;margin-bottom:32px;">
-          <p style="margin:0;font-size:14px;color:#cccccc;line-height:1.8;">
-            Hi ${customerName.split(' ')[0]}, ${info.message}
-          </p>
-          ${trackingNumber ? `
-          <div style="margin-top:16px;padding-top:16px;border-top:1px solid #1a1a1a;">
-            <p style="margin:0;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#888888;margin-bottom:8px;">Tracking Number</p>
-            <p style="margin:0;font-size:16px;font-weight:700;color:#ffffff;letter-spacing:0.1em;">${trackingNumber}</p>
-          </div>
-          ` : ''}
-        </div>
-
-        <div style="text-align:center;margin-bottom:40px;">
-          <a href="${process.env.FRONTEND_URL}/orders/${orderId}"
-             style="display:inline-block;padding:14px 40px;background:#ffffff;color:#0a0a0a;text-decoration:none;font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;">
-            View Order
-          </a>
-        </div>
-
-        <div style="border-top:1px solid #1a1a1a;padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#555555;">© 2026 FLAWS. South Africa.</p>
-          <p style="margin:8px 0 0;font-size:11px;color:#555555;">
-            Questions? <a href="mailto:support@flaws.co.za" style="color:#888;">support@flaws.co.za</a>
-          </p>
-        </div>
-
-      </div>
-    </body>
-    </html>
+    <div style="text-align:center;margin-bottom:8px;">
+      <a href="${process.env.FRONTEND_URL}/orders/${orderId}"
+         style="display:inline-block;padding:14px 48px;background:transparent;color:${COLORS.white};text-decoration:none;font-size:10px;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;border:1px solid ${COLORS.crimson};">
+        View Order
+      </a>
+    </div>
   `
+
+  const html = emailWrapper(content)
 
   await getResend().emails.send({
     from: getFrom(),
     to,
-    subject: `${info.title} — Order #${orderRef}`,
+    subject: `${info.headline} — Order #${orderRef}`,
     html,
   })
 }
 
+// ─────────────────────────────────────────────
+// 3. ABANDONED CART
+// ─────────────────────────────────────────────
 export async function sendAbandonedCart(params: {
   to: string
   customerName: string
@@ -254,134 +309,126 @@ export async function sendAbandonedCart(params: {
   cartTotal: number
 }) {
   const { to, customerName, items, cartTotal } = params
+  const firstName = customerName.split(' ')[0]
 
   const itemRows = items.slice(0, 3).map(item => `
     <tr>
-      <td style="padding:12px 0;border-bottom:1px solid #1a1a1a;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          ${item.image
-            ? `<img src="${item.image}" style="width:50px;height:65px;object-fit:cover;background:#111;" />`
-            : '<div style="width:50px;height:65px;background:#111;flex-shrink:0;"></div>'
-          }
-          <div>
-            <p style="margin:0;font-size:13px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:#ffffff;">${item.productName}</p>
-            <p style="margin:4px 0 0;font-size:12px;color:#888888;">${item.color} / ${item.size}</p>
-            <p style="margin:4px 0 0;font-size:13px;color:#888888;">R${item.price.toFixed(2)}</p>
-          </div>
-        </div>
+      <td style="padding:16px 0;border-bottom:1px solid ${COLORS.border};">
+        <table style="width:100%;border-collapse:collapse;" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="width:56px;vertical-align:top;padding-right:16px;">
+              ${item.image
+                ? `<img src="${item.image}" width="56" style="width:56px;height:72px;object-fit:cover;display:block;background:${COLORS.surface};border:1px solid ${COLORS.border};"/>`
+                : `<div style="width:56px;height:72px;background:${COLORS.surface};border:1px solid ${COLORS.border};"></div>`
+              }
+            </td>
+            <td style="vertical-align:top;">
+              <p style="margin:0 0 4px;font-family:Georgia,'Times New Roman',serif;font-size:13px;font-style:italic;color:${COLORS.white};">${item.productName}</p>
+              <p style="margin:0 0 6px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${COLORS.muted};">${item.color} / ${item.size}</p>
+              <p style="margin:0;font-size:13px;color:${COLORS.light};">R${item.price.toFixed(2)}</p>
+            </td>
+          </tr>
+        </table>
       </td>
     </tr>
   `).join('')
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
-    <body style="margin:0;padding:0;background-color:#0a0a0a;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-      <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+  const content = `
+    ${sectionHeader('Left Behind', `Still Waiting, ${firstName}`)}
 
-        <div style="text-align:center;margin-bottom:40px;">
-          <h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:0.4em;text-transform:uppercase;color:#ffffff;">FLAWS</h1>
-        </div>
+    <p style="font-size:13px;color:${COLORS.muted};line-height:1.9;margin:0 0 24px;letter-spacing:0.03em;">
+      You left some pieces in your cart. They're holding for you — but stock is limited and we can't guarantee availability.
+    </p>
 
-        <div style="border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:24px 0;margin-bottom:32px;text-align:center;">
-          <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#888888;">You left something behind</p>
-          <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff;">Your Cart Misses You</p>
-        </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <tbody>${itemRows}</tbody>
+    </table>
 
-        <p style="font-size:14px;color:#888888;line-height:1.8;margin-bottom:24px;">
-          Hi ${customerName.split(' ')[0]}, you left some items in your cart. They're still waiting for you — but stock is limited.
-        </p>
+    ${items.length > 3 ? `
+      <p style="font-size:11px;color:${COLORS.subtle};margin:0 0 20px;letter-spacing:0.1em;text-transform:uppercase;">
+        + ${items.length - 3} more item${items.length - 3 > 1 ? 's' : ''} in your cart
+      </p>
+    ` : ''}
 
-        <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
-          <tbody>${itemRows}</tbody>
-        </table>
+    <div style="background:${COLORS.surface};border:1px solid ${COLORS.border};padding:16px 20px;margin-bottom:32px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="font-size:12px;color:${COLORS.muted};letter-spacing:0.1em;text-transform:uppercase;">Cart Total</td>
+          <td style="font-size:15px;font-weight:600;color:${COLORS.white};text-align:right;font-family:Georgia,'Times New Roman',serif;font-style:italic;">R${cartTotal.toFixed(2)}</td>
+        </tr>
+      </table>
+    </div>
 
-        ${items.length > 3 ? `<p style="font-size:12px;color:#555;margin-bottom:24px;">+ ${items.length - 3} more item${items.length - 3 > 1 ? 's' : ''} in your cart</p>` : ''}
+    ${crimsonDivider}
 
-        <div style="border-top:1px solid #1a1a1a;padding-top:16px;margin-bottom:32px;">
-          <table style="width:100%;border-collapse:collapse;">
-            <tr>
-              <td style="font-size:14px;color:#888888;padding:8px 0;">Cart Total</td>
-              <td style="font-size:14px;font-weight:700;color:#ffffff;text-align:right;padding:8px 0;">R${cartTotal.toFixed(2)}</td>
-            </tr>
-          </table>
-        </div>
+    <div style="text-align:center;margin-bottom:20px;">
+      <a href="${process.env.FRONTEND_URL}/cart"
+         style="display:inline-block;padding:14px 48px;background:${COLORS.crimson};color:${COLORS.white};text-decoration:none;font-size:10px;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;border:1px solid ${COLORS.crimson};">
+        Complete Your Order
+      </a>
+    </div>
 
-        <div style="text-align:center;margin-bottom:40px;">
-          <a href="${process.env.FRONTEND_URL}/cart"
-             style="display:inline-block;padding:14px 40px;background:#ffffff;color:#0a0a0a;text-decoration:none;font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;">
-            Complete Your Order
-          </a>
-        </div>
-
-        <div style="border-top:1px solid #1a1a1a;padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#555555;">© 2026 FLAWS. South Africa.</p>
-          <p style="margin:8px 0 0;font-size:11px;color:#555555;">
-            <a href="${process.env.FRONTEND_URL}/unsubscribe" style="color:#444;">Unsubscribe</a>
-          </p>
-        </div>
-
-      </div>
-    </body>
-    </html>
+    <p style="text-align:center;margin:0;font-size:11px;color:${COLORS.subtle};">
+      <a href="${process.env.FRONTEND_URL}/unsubscribe" style="color:${COLORS.subtle};text-decoration:none;letter-spacing:0.1em;">Unsubscribe</a>
+    </p>
   `
+
+  const html = emailWrapper(content)
 
   await getResend().emails.send({
     from: getFrom(),
     to,
-    subject: `You left something behind — Complete your FLAWS order`,
+    subject: `You left something behind — FLAWS`,
     html,
   })
 }
 
+// ─────────────────────────────────────────────
+// 4. WAITLIST CONFIRMATION
+// ─────────────────────────────────────────────
 export async function sendWaitlistConfirmation(params: {
   to: string
   customerName: string
 }) {
   const { to, customerName } = params
- 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8"/>
-      <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-    </head>
-    <body style="margin:0;padding:0;background-color:#0a0a0a;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-      <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
- 
-        <div style="text-align:center;margin-bottom:48px;">
-          <h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:0.4em;text-transform:uppercase;color:#ffffff;">FLAWS</h1>
-        </div>
- 
-        <div style="border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:32px 0;margin-bottom:32px;text-align:center;">
-          <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#888888;">You're in</p>
-          <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff;">
-            Welcome to the list, ${customerName.split(' ')[0]}
-          </p>
-        </div>
- 
-        <div style="margin-bottom:40px;">
-          <p style="font-size:14px;color:#888888;line-height:1.9;margin:0;">
-            You're now on the FLAWS waitlist. When we launch, you'll be among the first to know — 
-            early access, exclusive drops, and member-only pricing before anyone else.
-          </p>
-          <p style="font-size:14px;color:#888888;line-height:1.9;margin:16px 0 0;">
-            We'll be in touch. Until then, stay tuned.
-          </p>
-        </div>
- 
-        <div style="border-top:1px solid #1a1a1a;padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#555555;letter-spacing:0.1em;">© 2026 FLAWS. South Africa.</p>
-          <p style="margin:8px 0 0;font-size:11px;color:#555555;">Questions? Reply to this email.</p>
-        </div>
- 
-      </div>
-    </body>
-    </html>
+  const firstName = customerName.split(' ')[0]
+
+  const content = `
+    ${sectionHeader("You're In", `Welcome to the List, ${firstName}`)}
+
+    <p style="font-size:13px;color:${COLORS.muted};line-height:2;margin:0 0 16px;letter-spacing:0.03em;">
+      You're now on the FLAWS waitlist. When we launch, you'll be among the first to know — early access, exclusive drops, and member-only pricing before anyone else.
+    </p>
+
+    <p style="font-size:13px;color:${COLORS.muted};line-height:2;margin:0 0 32px;letter-spacing:0.03em;">
+      We'll be in touch. Until then, stay tuned.
+    </p>
+
+    ${crimsonDivider}
+
+    <div style="background:${COLORS.surface};border:1px solid ${COLORS.borderAccent};padding:20px 24px;margin-bottom:8px;text-align:center;">
+      <p style="margin:0 0 4px;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:${COLORS.crimsonLight};">What to Expect</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:16px;">
+        <tr>
+          <td style="padding:8px 12px;text-align:center;border-right:1px solid ${COLORS.border};">
+            <p style="margin:0 0 4px;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:${COLORS.white};">Early Access</p>
+            <p style="margin:0;font-size:11px;color:${COLORS.muted};">Before the world</p>
+          </td>
+          <td style="padding:8px 12px;text-align:center;border-right:1px solid ${COLORS.border};">
+            <p style="margin:0 0 4px;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:${COLORS.white};">Exclusive Drops</p>
+            <p style="margin:0;font-size:11px;color:${COLORS.muted};">Members only</p>
+          </td>
+          <td style="padding:8px 12px;text-align:center;">
+            <p style="margin:0 0 4px;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:${COLORS.white};">Member Pricing</p>
+            <p style="margin:0;font-size:11px;color:${COLORS.muted};">Your reward</p>
+          </td>
+        </tr>
+      </table>
+    </div>
   `
- 
+
+  const html = emailWrapper(content)
+
   try {
     const result = await getResend().emails.send({
       from: getFrom(),

@@ -9,9 +9,9 @@ const email_1 = require("../lib/email");
 // POST /waitlist
 const joinWaitlist = async (req, res) => {
     try {
-        const { name, email, city, province, interests } = req.body;
-        if (!name || !email || !city || !province) {
-            return res.status(400).json({ message: 'Name, email, city and province are required' });
+        const { name, email, city, } = req.body;
+        if (!name || !email || !city) {
+            return res.status(400).json({ message: 'Name, email, city are required' });
         }
         // Check for existing entry
         const existing = await prisma_1.default.waitlistEntry.findUnique({ where: { email } });
@@ -23,8 +23,6 @@ const joinWaitlist = async (req, res) => {
                 name,
                 email,
                 city,
-                province,
-                interests: interests || [],
             },
         });
         // Send confirmation email — non-blocking
