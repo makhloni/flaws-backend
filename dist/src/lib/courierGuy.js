@@ -55,9 +55,7 @@ async function createShipment(params) {
         mute_notifications: false,
     });
     return {
-        // Response shape wasn't shown in the docs snippet you pasted —
-        // log `data` on your first sandbox call and correct these keys.
-        waybillId: data.id ?? data.short_tracking_reference,
+        waybillId: String(data.id ?? data.short_tracking_reference),
         trackingNumber: data.short_tracking_reference ?? data.tracking_reference,
         labelUrl: data.label_url,
         raw: data,
