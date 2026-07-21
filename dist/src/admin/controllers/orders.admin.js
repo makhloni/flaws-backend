@@ -130,7 +130,19 @@ async function getOrder(req, res) {
           <p style="font-size:1.5rem;font-weight:700;">R${Number(order.total).toFixed(2)}</p>
           <p style="font-size:0.7rem;color:#888;margin-top:0.25rem;">${new Date(order.createdAt).toLocaleDateString('en-ZA')}</p>
         </div>
-
+        <div class="card">
+          <div style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Courier Guy</div>
+          ${order.courierWaybillId ? `
+          <p style="font-size:0.75rem;color:#888;margin-bottom:0.25rem;">Tracking Number</p>
+          <p style="font-size:0.95rem;font-weight:600;margin-bottom:0.75rem;">${order.trackingNumber}</p>
+          <p style="font-size:0.65rem;color:#555;">Booked ${order.courierBookedAt ? new Date(order.courierBookedAt).toLocaleDateString('en-ZA') : ''}</p>
+          ` : `
+          <p style="font-size:0.75rem;color:#888;margin-bottom:1rem;">No shipment booked yet.</p>
+          <form method="POST" action="/admin/orders/${order.id}/book-courier">
+            <button type="submit" class="btn btn-secondary" style="width:100%;">Book Courier</button>
+          </form>
+        `}
+  </div>
         <div class="card">
           <div style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Update Status</div>
           <form method="POST" action="/admin/orders/${order.id}/status">

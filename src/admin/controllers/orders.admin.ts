@@ -132,7 +132,19 @@ export async function getOrder(req: Request, res: Response) {
           <p style="font-size:1.5rem;font-weight:700;">R${Number(order.total).toFixed(2)}</p>
           <p style="font-size:0.7rem;color:#888;margin-top:0.25rem;">${new Date(order.createdAt).toLocaleDateString('en-ZA')}</p>
         </div>
-
+        <div class="card">
+          <div style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Courier Guy</div>
+          ${order.courierWaybillId ? `
+          <p style="font-size:0.75rem;color:#888;margin-bottom:0.25rem;">Tracking Number</p>
+          <p style="font-size:0.95rem;font-weight:600;margin-bottom:0.75rem;">${order.trackingNumber}</p>
+          <p style="font-size:0.65rem;color:#555;">Booked ${order.courierBookedAt ? new Date(order.courierBookedAt).toLocaleDateString('en-ZA') : ''}</p>
+          ` : `
+          <p style="font-size:0.75rem;color:#888;margin-bottom:1rem;">No shipment booked yet.</p>
+          <form method="POST" action="/admin/orders/${order.id}/book-courier">
+            <button type="submit" class="btn btn-secondary" style="width:100%;">Book Courier</button>
+          </form>
+        `}
+  </div>
         <div class="card">
           <div style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Update Status</div>
           <form method="POST" action="/admin/orders/${order.id}/status">
@@ -197,38 +209,43 @@ export async function bookCourierManually(req: Request, res: Response) {
   })
   if (!order || !order.address) return res.redirect(`/admin/orders/${id}`)
 
-  const shipment = await createShipment({
-    orderId: order.id,
-    deliveryAddress: {
-      street: order.address.street,
-      city: order.address.city,
-      province: order.address.province,
-      postalCode: order.address.postalCode,
-      country: 'ZA',
-    },
-    deliveryContact: {
-      name: order.address.fullName,
-      email: order.user.email,
-      mobileNumber: order.user.phone ?? undefined,
-    },
-    parcels: order.items.flatMap(item =>
-      Array.from({ length: item.quantity }, () => ({
-        description: item.product.name,
-        weightKg: 0.5,
-      }))
-    ),
-  })
-  await prisma.order.update({
-    where: { id: order.id },
-    data: {
-      courierWaybillId: shipment.waybillId,
-      trackingNumber: shipment.trackingNumber,
-      courierBookedAt: new Date(),
-      courierStatus: 'BOOKED',
-    },
-  })
+  try {
+    const shipment = await createShipment({
+      orderId: order.id,
+      deliveryAddress: {
+        street: order.address.street,
+        city: order.address.city,
+        province: order.address.province,
+        postalCode: order.address.postalCode,
+        country: 'ZA',
+      },
+      deliveryContact: {
+        name: order.address.fullName,
+        email: order.user.email,
+        mobileNumber: order.user.phone ?? undefined,
+      },
+      parcels: order.items.flatMap(item =>
+        Array.from({ length: item.quantity }, () => ({
+          description: item.product.name,
+          weightKg: 0.5,
+        }))
+      ),
+    })
 
-  await logActivity('COURIER_BOOKED', 'Order', `Order #${id.slice(0, 8).toUpperCase()} booked with Courier Guy`, id)
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        courierWaybillId: shipment.waybillId,
+        trackingNumber: shipment.trackingNumber,
+        courierBookedAt: new Date(),
+        courierStatus: 'BOOKED',
+      },
+    })
+
+    await logActivity('COURIER_BOOKED', 'Order', `Order #${id.slice(0, 8).toUpperCase()} booked with Courier Guy`, id)
+  } catch (err: any) {
+    console.error('Courier booking failed:', err.response?.data || err.message)
+  }
 
   res.redirect(`/admin/orders/${id}`)
 }
