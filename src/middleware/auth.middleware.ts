@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { supabase } from '../lib/supabase'
+import prisma from '../lib/prisma'
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization
@@ -16,6 +17,13 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ message: 'Unauthorized - invalid token' })
   }
 
-  req.user = data.user
+  // Supabase confirming the token is valid doesn't mean a matching
+  // row exists in our own User table — check separately.
+  const user = await prisma.user.findUnique({ where: { id: data.user.id } })
+  if (!user) {
+    return res.status(401).json({ message: 'Unauthorized - user record not found' })
+  }
+
+  req.user = user
   next()
 }

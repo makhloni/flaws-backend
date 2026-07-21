@@ -3,6 +3,7 @@ import prisma from '../../lib/prisma'
 import { layout } from '../views/layout'
 import { logActivity } from '../lib/logger'
 import { sendOrderStatusUpdate } from '../../lib/email'
+import { createShipment } from '../../lib/courierGuy'
 
 export async function getOrders(req: Request, res: Response) {
   const status = req.query.status as string | undefined
@@ -183,6 +184,51 @@ export async function updateOrderStatus(req: Request, res: Response) {
   }
 
   await logActivity('ORDER_STATUS_UPDATED', 'Order', `Order #${id.slice(0, 8).toUpperCase()} status updated to ${status}`, id)
+
+  res.redirect(`/admin/orders/${id}`)
+}
+
+
+export async function bookCourierManually(req: Request, res: Response) {
+  const id = req.params.id as string
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { address: true, user: true, items: { include: { product: true } } },
+  })
+  if (!order || !order.address) return res.redirect(`/admin/orders/${id}`)
+
+  const shipment = await createShipment({
+    orderId: order.id,
+    deliveryAddress: {
+      street: order.address.street,
+      city: order.address.city,
+      province: order.address.province,
+      postalCode: order.address.postalCode,
+      country: 'ZA',
+    },
+    deliveryContact: {
+      name: order.address.fullName,
+      email: order.user.email,
+      mobileNumber: order.user.phone ?? undefined,
+    },
+    parcels: order.items.flatMap(item =>
+      Array.from({ length: item.quantity }, () => ({
+        description: item.product.name,
+        weightKg: 0.5,
+      }))
+    ),
+  })
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      courierWaybillId: shipment.waybillId,
+      trackingNumber: shipment.trackingNumber,
+      courierBookedAt: new Date(),
+      courierStatus: 'BOOKED',
+    },
+  })
+
+  await logActivity('COURIER_BOOKED', 'Order', `Order #${id.slice(0, 8).toUpperCase()} booked with Courier Guy`, id)
 
   res.redirect(`/admin/orders/${id}`)
 }

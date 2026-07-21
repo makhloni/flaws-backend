@@ -1,4 +1,4 @@
-import { User } from '@supabase/supabase-js'
+import { User } from '@prisma/client'
 
 declare global {
   namespace Express {
@@ -7,3 +7,5 @@ declare global {
     }
   }
 }
+
+export {}

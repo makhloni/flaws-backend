@@ -5,7 +5,7 @@ import { getLogin, postLogin, postLogout } from '../controllers/auth.admin'
 import { getDashboard } from '../controllers/dashboard.admin'
 import { getProducts, getNewProduct, postProduct, getEditProduct, postEditProduct, deleteProduct, deleteProductImage } from '../controllers/products.admin'
 import { getCollections, getNewCollection, postCollection, getEditCollection, postEditCollection, deleteCollection } from '../controllers/collections.admin'
-import { getOrders, getOrder, updateOrderStatus } from '../controllers/orders.admin'
+import { getOrders, getOrder, updateOrderStatus, bookCourierManually } from '../controllers/orders.admin'
 import { getUsers } from '../controllers/users.admin'
 import { getActivityLog } from '../controllers/activity.admin'
 import { getHomepage, postHomepage } from '../controllers/homepage.admin'
@@ -57,5 +57,8 @@ router.post('/homepage', postHomepage)
 router.get('/waitlist', adminGetWaitlist)
 router.post('/waitlist/toggle', adminToggleWaitlistMode)
 router.get('/waitlist/export', adminExportWaitlistCSV)
+
+
+router.post('/admin/orders/:id/book-courier', bookCourierManually)
 
 export default router

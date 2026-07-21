@@ -7,6 +7,7 @@ exports.verifyPayment = exports.payfastITN = exports.initializePayment = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const email_1 = require("../lib/email");
+const courierGuy_1 = require("../lib/courierGuy");
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function generatePayFastSignature(data, passphrase = null) {
     // Sort keys, build query string
@@ -83,6 +84,42 @@ async function fulfillOrder({ userId, addressId, reference, amountInRands, sendE
         });
     }
     await prisma_1.default.cart.deleteMany({ where: { userId } });
+    // ─── Book Courier Guy shipment ──────────────────────────
+    if (newOrder.address) {
+        try {
+            const shipment = await (0, courierGuy_1.createShipment)({
+                orderId: newOrder.id,
+                deliveryAddress: {
+                    street: newOrder.address.street,
+                    city: newOrder.address.city,
+                    province: newOrder.address.province,
+                    postalCode: newOrder.address.postalCode,
+                    country: 'ZA',
+                },
+                deliveryContact: {
+                    name: newOrder.address.fullName,
+                    email: newOrder.user.email,
+                    mobileNumber: newOrder.user.phone ?? undefined,
+                },
+                parcels: newOrder.items.flatMap(item => Array.from({ length: item.quantity }, () => ({
+                    description: item.product.name,
+                    weightKg: 0.5, // TODO: real per-item weight once you add it to Product/Variant
+                }))),
+            });
+            await prisma_1.default.order.update({
+                where: { id: newOrder.id },
+                data: {
+                    courierWaybillId: shipment.waybillId,
+                    trackingNumber: shipment.trackingNumber,
+                    courierBookedAt: new Date(),
+                    courierStatus: 'BOOKED',
+                },
+            });
+        }
+        catch (courierErr) {
+            console.error('Courier Guy booking failed:', courierErr);
+        }
+    }
     if (sendEmail) {
         try {
             if (newOrder.address) {

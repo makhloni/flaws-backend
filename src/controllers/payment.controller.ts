@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import crypto from 'crypto'
 import prisma from '../lib/prisma'
 import { sendOrderConfirmation } from '../lib/email'
+import { createShipment } from '../lib/courierGuy'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -108,6 +109,45 @@ async function fulfillOrder({
 
   await prisma.cart.deleteMany({ where: { userId } })
 
+  // ─── Book Courier Guy shipment ──────────────────────────
+  if (newOrder.address) {
+    try {
+      const shipment = await createShipment({
+        orderId: newOrder.id,
+        deliveryAddress: {
+          street: newOrder.address.street,
+          city: newOrder.address.city,
+          province: newOrder.address.province,
+          postalCode: newOrder.address.postalCode,
+          country: 'ZA',
+        },
+        deliveryContact: {
+          name: newOrder.address.fullName,
+          email: newOrder.user.email,
+          mobileNumber: newOrder.user.phone ?? undefined,
+        },
+        parcels: newOrder.items.flatMap(item =>
+          Array.from({ length: item.quantity }, () => ({
+            description: item.product.name,
+            weightKg: 0.5, // TODO: real per-item weight once you add it to Product/Variant
+          }))
+        ),
+      })
+
+      await prisma.order.update({
+        where: { id: newOrder.id },
+        data: {
+          courierWaybillId: shipment.waybillId,
+          trackingNumber: shipment.trackingNumber,
+          courierBookedAt: new Date(),
+          courierStatus: 'BOOKED',
+        },
+      })
+    } catch (courierErr) {
+      console.error('Courier Guy booking failed:', courierErr)
+    }
+  }
+
   if (sendEmail) {
     try {
       if (newOrder.address) {
@@ -154,7 +194,7 @@ export const initializePayment = async (req: Request, res: Response) => {
     const { addressId } = req.body
     const userId = req.user?.id
 
-    
+
     if (!userId) return res.status(401).json({ message: 'Unauthorized' })
     if (!addressId) return res.status(400).json({ message: 'Address required' })
 

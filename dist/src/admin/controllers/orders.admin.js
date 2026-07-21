@@ -6,10 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getOrders = getOrders;
 exports.getOrder = getOrder;
 exports.updateOrderStatus = updateOrderStatus;
+exports.bookCourierManually = bookCourierManually;
 const prisma_1 = __importDefault(require("../../lib/prisma"));
 const layout_1 = require("../views/layout");
 const logger_1 = require("../lib/logger");
 const email_1 = require("../../lib/email");
+const courierGuy_1 = require("../../lib/courierGuy");
 async function getOrders(req, res) {
     const status = req.query.status;
     const orders = await prisma_1.default.order.findMany({
@@ -177,5 +179,44 @@ async function updateOrderStatus(req, res) {
         console.error('Status email failed:', emailErr);
     }
     await (0, logger_1.logActivity)('ORDER_STATUS_UPDATED', 'Order', `Order #${id.slice(0, 8).toUpperCase()} status updated to ${status}`, id);
+    res.redirect(`/admin/orders/${id}`);
+}
+async function bookCourierManually(req, res) {
+    const id = req.params.id;
+    const order = await prisma_1.default.order.findUnique({
+        where: { id },
+        include: { address: true, user: true, items: { include: { product: true } } },
+    });
+    if (!order || !order.address)
+        return res.redirect(`/admin/orders/${id}`);
+    const shipment = await (0, courierGuy_1.createShipment)({
+        orderId: order.id,
+        deliveryAddress: {
+            street: order.address.street,
+            city: order.address.city,
+            province: order.address.province,
+            postalCode: order.address.postalCode,
+            country: 'ZA',
+        },
+        deliveryContact: {
+            name: order.address.fullName,
+            email: order.user.email,
+            mobileNumber: order.user.phone ?? undefined,
+        },
+        parcels: order.items.flatMap(item => Array.from({ length: item.quantity }, () => ({
+            description: item.product.name,
+            weightKg: 0.5,
+        }))),
+    });
+    await prisma_1.default.order.update({
+        where: { id: order.id },
+        data: {
+            courierWaybillId: shipment.waybillId,
+            trackingNumber: shipment.trackingNumber,
+            courierBookedAt: new Date(),
+            courierStatus: 'BOOKED',
+        },
+    });
+    await (0, logger_1.logActivity)('COURIER_BOOKED', 'Order', `Order #${id.slice(0, 8).toUpperCase()} booked with Courier Guy`, id);
     res.redirect(`/admin/orders/${id}`);
 }

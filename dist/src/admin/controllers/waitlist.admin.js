@@ -58,7 +58,7 @@ async function adminGetWaitlist(req, res) {
           font-weight:600;cursor:pointer;font-family:inherit;
           transition:all 0.2s;
         ">
-          ${waitlistMode ? '🚀 Launch Site' : '⏸ Enable Waitlist'}
+          ${waitlistMode ? 'Launch Site' : '⏸ Enable Waitlist'}
         </button>
       </form>
     </div>

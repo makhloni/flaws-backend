@@ -52,4 +52,5 @@ router.post('/homepage', homepage_admin_1.postHomepage);
 router.get('/waitlist', waitlist_admin_1.adminGetWaitlist);
 router.post('/waitlist/toggle', waitlist_admin_1.adminToggleWaitlistMode);
 router.get('/waitlist/export', waitlist_admin_1.adminExportWaitlistCSV);
+router.post('/admin/orders/:id/book-courier', orders_admin_1.bookCourierManually);
 exports.default = router;

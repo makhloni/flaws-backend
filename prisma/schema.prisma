@@ -51,6 +51,7 @@ model Address {
   userId     String
   fullName   String
   street     String
+  suburb     String?   // new — maps to local_area, improves rate/geocoding accuracy
   city       String
   province   String
   postalCode String
@@ -58,6 +59,7 @@ model Address {
   isDefault  Boolean @default(false)
   orders     Order[]
 }
+
 
 model Collection {
   id          String    @id @default(uuid())
@@ -142,23 +144,26 @@ model Favourites {
 }
 
 model Order {
-  id              String      @id @default(uuid())
-  user            User        @relation(fields: [userId], references: [id])
-  userId          String
-  address         Address     @relation(fields: [addressId], references: [id])
-  addressId       String
-  status          OrderStatus @default(PENDING)
-  items           OrderItem[]
-  subtotal        Decimal     @db.Decimal(10, 2)
-  shippingCost    Decimal     @db.Decimal(10, 2) @default(0)
-  discount        Decimal     @db.Decimal(10, 2) @default(0)
-  total           Decimal     @db.Decimal(10, 2)
-  paymentReference String? @unique
-  isPaid          Boolean     @default(false)
-  paidAt          DateTime?
-  trackingNumber  String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id                String      @id @default(uuid())
+  user              User        @relation(fields: [userId], references: [id])
+  userId            String
+  address           Address     @relation(fields: [addressId], references: [id])
+  addressId         String
+  status            OrderStatus @default(PENDING)
+  items             OrderItem[]
+  subtotal          Decimal     @db.Decimal(10, 2)
+  shippingCost      Decimal     @db.Decimal(10, 2) @default(0)
+  discount          Decimal     @db.Decimal(10, 2) @default(0)
+  total             Decimal     @db.Decimal(10, 2)
+  paymentReference  String?     @unique
+  isPaid            Boolean     @default(false)
+  paidAt            DateTime?
+  trackingNumber    String?
+  courierWaybillId  String?     // Courier Guy's internal shipment/waybill ID
+  courierBookedAt   DateTime?
+  courierStatus     String?     // last known status string from Courier Guy
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 }
 
 model OrderItem {
