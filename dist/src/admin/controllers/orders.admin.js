@@ -201,6 +201,10 @@ async function bookCourierManually(req, res) {
     });
     if (!order || !order.address)
         return res.redirect(`/admin/orders/${id}`);
+    if (order.courierWaybillId) {
+        console.log('Order already has a courier booking, skipping.');
+        return res.redirect(`/admin/orders/${id}`);
+    }
     try {
         const shipment = await (0, courierGuy_1.createShipment)({
             orderId: order.id,
