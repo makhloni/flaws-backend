@@ -12,7 +12,12 @@ import { getHomepage, postHomepage } from '../controllers/homepage.admin'
 import { adminExportWaitlistCSV, adminGetWaitlist, adminToggleWaitlistMode } from '../controllers/waitlist.admin'
 
 const router = Router()
-const upload = multer({ storage: multer.memoryStorage() })
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB per file
+  },
+})
 
 // Auth
 router.get('/login', getLogin)

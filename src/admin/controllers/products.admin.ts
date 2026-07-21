@@ -5,6 +5,18 @@ import { supabaseAdmin } from '../../lib/supabase'
 import { logActivity } from '../lib/logger'
 import path from 'path'
 
+async function uploadWithTimeout(file: Express.Multer.File, fileName: string, ms = 20000) {
+  const uploadPromise = supabaseAdmin.storage
+    .from(process.env.SUPABASE_STORAGE_BUCKET || 'product-images')
+    .upload(fileName, file.buffer, { contentType: file.mimetype })
+
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Upload timed out')), ms)
+  )
+
+  return Promise.race([uploadPromise, timeoutPromise])
+}
+
 export async function getProducts(req: Request, res: Response) {
   const products = await prisma.product.findMany({
     include: {
@@ -469,16 +481,20 @@ export async function getEditProduct(req: Request, res: Response) {
 
 export async function postEditProduct(req: Request, res: Response) {
   const id = req.params.id as string
+  console.log('Supabase URL configured:', !!process.env.SUPABASE_URL)
+  console.log('Bucket:', process.env.SUPABASE_STORAGE_BUCKET)
   try {
     const { name, slug, description, collectionId, gender, isFeatured } = req.body
     const files = req.files as Express.Multer.File[]
 
     for (const file of files || []) {
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(file.originalname)}`
-      const { error } = await supabaseAdmin.storage
-        .from(process.env.SUPABASE_STORAGE_BUCKET || 'product-images')
-        .upload(fileName, file.buffer, { contentType: file.mimetype })
-      if (!error) {
+      try {
+        const { error } = await uploadWithTimeout(file, fileName) as any
+        if (error) {
+          console.error('Supabase upload failed:', error)
+          continue
+        }
         const { data } = supabaseAdmin.storage
           .from(process.env.SUPABASE_STORAGE_BUCKET || 'product-images')
           .getPublicUrl(fileName)
@@ -491,9 +507,10 @@ export async function postEditProduct(req: Request, res: Response) {
             position: currentCount,
           },
         })
+      } catch (uploadErr: any) {
+        console.error(`Upload failed for ${file.originalname}:`, uploadErr.message)
       }
     }
-
     const variantsRaw = req.body.variants || {}
     const variantIds = req.body.variantIds || {}
     const variantEntries = Object.entries(variantsRaw) as [string, any][]

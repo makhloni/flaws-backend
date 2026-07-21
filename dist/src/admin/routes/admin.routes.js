@@ -16,7 +16,12 @@ const activity_admin_1 = require("../controllers/activity.admin");
 const homepage_admin_1 = require("../controllers/homepage.admin");
 const waitlist_admin_1 = require("../controllers/waitlist.admin");
 const router = (0, express_1.Router)();
-const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage() });
+const upload = (0, multer_1.default)({
+    storage: multer_1.default.memoryStorage(),
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB per file
+    },
+});
 // Auth
 router.get('/login', auth_admin_1.getLogin);
 router.post('/login', auth_admin_1.postLogin);

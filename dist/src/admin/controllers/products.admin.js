@@ -15,6 +15,13 @@ const layout_1 = require("../views/layout");
 const supabase_1 = require("../../lib/supabase");
 const logger_1 = require("../lib/logger");
 const path_1 = __importDefault(require("path"));
+async function uploadWithTimeout(file, fileName, ms = 20000) {
+    const uploadPromise = supabase_1.supabaseAdmin.storage
+        .from(process.env.SUPABASE_STORAGE_BUCKET || 'product-images')
+        .upload(fileName, file.buffer, { contentType: file.mimetype });
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Upload timed out')), ms));
+    return Promise.race([uploadPromise, timeoutPromise]);
+}
 async function getProducts(req, res) {
     const products = await prisma_1.default.product.findMany({
         include: {
@@ -456,15 +463,19 @@ async function getEditProduct(req, res) {
 }
 async function postEditProduct(req, res) {
     const id = req.params.id;
+    console.log('Supabase URL configured:', !!process.env.SUPABASE_URL);
+    console.log('Bucket:', process.env.SUPABASE_STORAGE_BUCKET);
     try {
         const { name, slug, description, collectionId, gender, isFeatured } = req.body;
         const files = req.files;
         for (const file of files || []) {
             const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}${path_1.default.extname(file.originalname)}`;
-            const { error } = await supabase_1.supabaseAdmin.storage
-                .from(process.env.SUPABASE_STORAGE_BUCKET || 'product-images')
-                .upload(fileName, file.buffer, { contentType: file.mimetype });
-            if (!error) {
+            try {
+                const { error } = await uploadWithTimeout(file, fileName);
+                if (error) {
+                    console.error('Supabase upload failed:', error);
+                    continue;
+                }
                 const { data } = supabase_1.supabaseAdmin.storage
                     .from(process.env.SUPABASE_STORAGE_BUCKET || 'product-images')
                     .getPublicUrl(fileName);
@@ -477,6 +488,9 @@ async function postEditProduct(req, res) {
                         position: currentCount,
                     },
                 });
+            }
+            catch (uploadErr) {
+                console.error(`Upload failed for ${file.originalname}:`, uploadErr.message);
             }
         }
         const variantsRaw = req.body.variants || {};
