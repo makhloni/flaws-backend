@@ -65,6 +65,7 @@ router.post('/collections/:id/delete', deleteCollection)
 router.get('/orders', getOrders)
 router.get('/orders/:id', getOrder)
 router.post('/orders/:id/status', updateOrderStatus)
+router.post('/orders/:id/book-courier', bookCourierManually)
 
 // Users
 router.get('/users', getUsers)
@@ -78,6 +79,5 @@ router.post('/waitlist/toggle', adminToggleWaitlistMode)
 router.get('/waitlist/export', adminExportWaitlistCSV)
 
 
-router.post('/admin/orders/:id/book-courier', bookCourierManually)
 
 export default router

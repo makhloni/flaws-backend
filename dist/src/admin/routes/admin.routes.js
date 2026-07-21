@@ -62,6 +62,7 @@ router.post('/collections/:id/delete', collections_admin_1.deleteCollection);
 router.get('/orders', orders_admin_1.getOrders);
 router.get('/orders/:id', orders_admin_1.getOrder);
 router.post('/orders/:id/status', orders_admin_1.updateOrderStatus);
+router.post('/orders/:id/book-courier', orders_admin_1.bookCourierManually);
 // Users
 router.get('/users', users_admin_1.getUsers);
 router.get('/activity', activity_admin_1.getActivityLog);
@@ -70,5 +71,4 @@ router.post('/homepage', homepage_admin_1.postHomepage);
 router.get('/waitlist', waitlist_admin_1.adminGetWaitlist);
 router.post('/waitlist/toggle', waitlist_admin_1.adminToggleWaitlistMode);
 router.get('/waitlist/export', waitlist_admin_1.adminExportWaitlistCSV);
-router.post('/admin/orders/:id/book-courier', orders_admin_1.bookCourierManually);
 exports.default = router;

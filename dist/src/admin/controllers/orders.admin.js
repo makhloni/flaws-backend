@@ -201,34 +201,39 @@ async function bookCourierManually(req, res) {
     });
     if (!order || !order.address)
         return res.redirect(`/admin/orders/${id}`);
-    const shipment = await (0, courierGuy_1.createShipment)({
-        orderId: order.id,
-        deliveryAddress: {
-            street: order.address.street,
-            city: order.address.city,
-            province: order.address.province,
-            postalCode: order.address.postalCode,
-            country: 'ZA',
-        },
-        deliveryContact: {
-            name: order.address.fullName,
-            email: order.user.email,
-            mobileNumber: order.user.phone ?? undefined,
-        },
-        parcels: order.items.flatMap(item => Array.from({ length: item.quantity }, () => ({
-            description: item.product.name,
-            weightKg: 0.5,
-        }))),
-    });
-    await prisma_1.default.order.update({
-        where: { id: order.id },
-        data: {
-            courierWaybillId: shipment.waybillId,
-            trackingNumber: shipment.trackingNumber,
-            courierBookedAt: new Date(),
-            courierStatus: 'BOOKED',
-        },
-    });
-    await (0, logger_1.logActivity)('COURIER_BOOKED', 'Order', `Order #${id.slice(0, 8).toUpperCase()} booked with Courier Guy`, id);
+    try {
+        const shipment = await (0, courierGuy_1.createShipment)({
+            orderId: order.id,
+            deliveryAddress: {
+                street: order.address.street,
+                city: order.address.city,
+                province: order.address.province,
+                postalCode: order.address.postalCode,
+                country: 'ZA',
+            },
+            deliveryContact: {
+                name: order.address.fullName,
+                email: order.user.email,
+                mobileNumber: order.user.phone ?? undefined,
+            },
+            parcels: order.items.flatMap(item => Array.from({ length: item.quantity }, () => ({
+                description: item.product.name,
+                weightKg: 0.5,
+            }))),
+        });
+        await prisma_1.default.order.update({
+            where: { id: order.id },
+            data: {
+                courierWaybillId: shipment.waybillId,
+                trackingNumber: shipment.trackingNumber,
+                courierBookedAt: new Date(),
+                courierStatus: 'BOOKED',
+            },
+        });
+        await (0, logger_1.logActivity)('COURIER_BOOKED', 'Order', `Order #${id.slice(0, 8).toUpperCase()} booked with Courier Guy`, id);
+    }
+    catch (err) {
+        console.error('Courier booking failed:', err.response?.data || err.message);
+    }
     res.redirect(`/admin/orders/${id}`);
 }
