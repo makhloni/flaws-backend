@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseAdmin } from '../lib/supabase'
 import prisma from '../lib/prisma'
 
 // POST /api/auth/register
@@ -10,7 +10,7 @@ export const register = async (req: Request, res: Response) => {
     return res.status(400).json({ message: 'Email, password and name are required' })
   }
 
-  const { data, error } = await supabase.auth.admin.createUser({
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
@@ -52,7 +52,7 @@ export const login = async (req: Request, res: Response) => {
 export const logout = async (req: Request, res: Response) => {
   const token = req.headers.authorization?.split(' ')[1]
 
-  if (token) await supabase.auth.admin.signOut(token)
+  if (token) await supabaseAdmin.auth.admin.signOut(token)
 
   res.json({ message: 'Logged out' })
 }

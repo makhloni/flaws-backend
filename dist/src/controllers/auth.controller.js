@@ -12,7 +12,7 @@ const register = async (req, res) => {
     if (!email || !password || !name) {
         return res.status(400).json({ message: 'Email, password and name are required' });
     }
-    const { data, error } = await supabase_1.supabase.auth.admin.createUser({
+    const { data, error } = await supabase_1.supabaseAdmin.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
@@ -49,7 +49,7 @@ exports.login = login;
 const logout = async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token)
-        await supabase_1.supabase.auth.admin.signOut(token);
+        await supabase_1.supabaseAdmin.auth.admin.signOut(token);
     res.json({ message: 'Logged out' });
 };
 exports.logout = logout;
