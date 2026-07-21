@@ -19,6 +19,20 @@ const upload = multer({
   },
 })
 
+function handleUploadErrors(err: any, req: any, res: any, next: any) {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      const productId = req.params.id
+      const redirectTo = productId
+        ? `/admin/products/${productId}/edit?error=${encodeURIComponent('Image too large — max 5MB per file')}`
+        : `/admin/products/new?error=${encodeURIComponent('Image too large — max 5MB per file')}`
+      return res.redirect(redirectTo)
+    }
+    return res.redirect(`/admin/products?error=${encodeURIComponent(err.message)}`)
+  }
+  next(err)
+}
+
 // Auth
 router.get('/login', getLogin)
 router.post('/login', postLogin)
@@ -33,9 +47,9 @@ router.get('/', getDashboard)
 // Products
 router.get('/products', getProducts)
 router.get('/products/new', getNewProduct)
-router.post('/products', upload.array('images', 5), postProduct)
+router.post('/products', upload.array('images', 5), handleUploadErrors, postProduct)
 router.get('/products/:id/edit', getEditProduct)
-router.post('/products/:id/edit', upload.array('images', 5), postEditProduct)
+router.post('/products/:id/edit', upload.array('images', 5), handleUploadErrors, postEditProduct)
 router.post('/products/:id/delete', deleteProduct)
 router.post('/products/:id/images/:imageId/delete', deleteProductImage)
 

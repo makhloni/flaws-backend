@@ -441,6 +441,7 @@ async function getEditProduct(req, res) {
             <div style="margin-bottom:1rem;">${existingImages || '<p style="color:#888;font-size:0.75rem;">No images</p>'}</div>
             <div style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#888;margin:1rem 0 0.5rem;">Add More Images</div>
             <input class="form-input" type="file" name="images" multiple accept="image/*" style="padding:0.5rem;" />
+            <p style="font-size:0.65rem;color:#555;margin-top:0.5rem;">First image will be set as primary. Max 5 images, 5MB each.</p>
           </div>
           <button type="submit" class="btn btn-primary" style="width:100%;padding:1.25rem;">Save Changes</button>
         </div>
@@ -463,8 +464,6 @@ async function getEditProduct(req, res) {
 }
 async function postEditProduct(req, res) {
     const id = req.params.id;
-    console.log('Supabase URL configured:', !!process.env.SUPABASE_URL);
-    console.log('Bucket:', process.env.SUPABASE_STORAGE_BUCKET);
     try {
         const { name, slug, description, collectionId, gender, isFeatured } = req.body;
         const files = req.files;

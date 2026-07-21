@@ -22,6 +22,19 @@ const upload = (0, multer_1.default)({
         fileSize: 5 * 1024 * 1024, // 5MB per file
     },
 });
+function handleUploadErrors(err, req, res, next) {
+    if (err instanceof multer_1.default.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            const productId = req.params.id;
+            const redirectTo = productId
+                ? `/admin/products/${productId}/edit?error=${encodeURIComponent('Image too large — max 5MB per file')}`
+                : `/admin/products/new?error=${encodeURIComponent('Image too large — max 5MB per file')}`;
+            return res.redirect(redirectTo);
+        }
+        return res.redirect(`/admin/products?error=${encodeURIComponent(err.message)}`);
+    }
+    next(err);
+}
 // Auth
 router.get('/login', auth_admin_1.getLogin);
 router.post('/login', auth_admin_1.postLogin);
@@ -33,9 +46,9 @@ router.get('/', dashboard_admin_1.getDashboard);
 // Products
 router.get('/products', products_admin_1.getProducts);
 router.get('/products/new', products_admin_1.getNewProduct);
-router.post('/products', upload.array('images', 5), products_admin_1.postProduct);
+router.post('/products', upload.array('images', 5), handleUploadErrors, products_admin_1.postProduct);
 router.get('/products/:id/edit', products_admin_1.getEditProduct);
-router.post('/products/:id/edit', upload.array('images', 5), products_admin_1.postEditProduct);
+router.post('/products/:id/edit', upload.array('images', 5), handleUploadErrors, products_admin_1.postEditProduct);
 router.post('/products/:id/delete', products_admin_1.deleteProduct);
 router.post('/products/:id/images/:imageId/delete', products_admin_1.deleteProductImage);
 // Collections
