@@ -35,7 +35,7 @@ export const createOrder = async (req: Request, res: Response) => {
     return sum + price * item.quantity
   }, 0)
 
-  const shippingCost = subtotal > 1000 ? 0 : 100 // free shipping over R1000
+  const shippingCost = subtotal > 1500 ? 0 : 100 // free shipping over R1500
   const total = subtotal + shippingCost
 
   // Create order + items + deduct stock in a transaction
