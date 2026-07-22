@@ -98,7 +98,9 @@ export async function createShipment(params: {
 }
 
 export async function getShipmentStatus(trackingReference: string) {
-  const { data } = await client.get(`/tracking/shipments/${trackingReference}`)
+  const { data } = await client.get('/tracking/shipments', {
+    params: { tracking_reference: trackingReference },
+  })
   return data
 }
 
