@@ -132,19 +132,18 @@ export const trackOrder = async (req: Request, res: Response) => {
 
   if (!order) return res.status(404).json({ message: 'Order not found' })
 
-  if (!order.courierWaybillId) {
+  if (!order.trackingNumber) {
     return res.json({ booked: false, status: null })
   }
 
   try {
-    const status = await getShipmentStatus(order.courierWaybillId)
+    const status = await getShipmentStatus(order.trackingNumber)
     res.json({ booked: true, status })
   } catch (err: any) {
     console.error('Tracking lookup failed:', err.response?.data || err.message)
     res.status(502).json({ message: 'Could not fetch tracking status right now' })
   }
 }
-
 
 // PATCH /api/orders/:id/cancel
 export const cancelOrder = async (req: Request, res: Response) => {

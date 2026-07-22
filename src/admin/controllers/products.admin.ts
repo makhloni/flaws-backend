@@ -309,12 +309,14 @@ export async function postProduct(req: Request, res: Response) {
       const { error } = await supabaseAdmin.storage
         .from(process.env.SUPABASE_STORAGE_BUCKET || 'product-images')
         .upload(fileName, file.buffer, { contentType: file.mimetype, upsert: false })
-      if (!error) {
-        const { data } = supabaseAdmin.storage
-          .from(process.env.SUPABASE_STORAGE_BUCKET || 'product-images')
-          .getPublicUrl(fileName)
-        imageUrls.push(data.publicUrl)
+      if (error) {
+        console.error('Supabase upload failed:', error)
+        continue
       }
+      const { data } = supabaseAdmin.storage
+        .from(process.env.SUPABASE_STORAGE_BUCKET || 'product-images')
+        .getPublicUrl(fileName)
+      imageUrls.push(data.publicUrl)
     }
 
     const variantsRaw = req.body.variants || {}

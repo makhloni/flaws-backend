@@ -97,8 +97,8 @@ export async function createShipment(params: {
 }
 }
 
-export async function getShipmentStatus(shortTrackingReference: string) {
-  const { data } = await client.get(`/tracking/shipments/${shortTrackingReference}`)
+export async function getShipmentStatus(trackingReference: string) {
+  const { data } = await client.get(`/tracking/shipments/${trackingReference}`)
   return data
 }
 
