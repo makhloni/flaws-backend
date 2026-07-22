@@ -14,6 +14,7 @@ import contentRoutes from './routes/content.routes'
 import waitlistRoutes from './routes/waitlist.routes'
 import { runAbandonedCartJob } from './jobs/abandonedCart'
 import { errorHandler } from './middleware/errorHandler'
+import shippingRoutes from './routes/shipping.routes'
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -69,6 +70,7 @@ app.use('/admin', adminRoutes)
 app.use('/content', contentRoutes)
 app.use('/contact', contactRoutes)
 app.use('/waitlist', waitlistRoutes)
+app.use('/shipping', shippingRoutes)
 
 app.use(errorHandler)
 

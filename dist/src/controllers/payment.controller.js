@@ -26,7 +26,7 @@ function validateITNSignature(body, passphrase = null) {
     return computedSignature === signature;
 }
 // ─── Shared fulfillment  ───────────────────────────────────
-async function fulfillOrder({ userId, addressId, reference, amountInRands, sendEmail = false, }) {
+async function fulfillOrder({ userId, addressId, reference, amountInRands, serviceLevelCode = 'ECO', sendEmail = false, }) {
     const existing = await prisma_1.default.order.findFirst({
         where: { paymentReference: reference },
     });
@@ -42,8 +42,8 @@ async function fulfillOrder({ userId, addressId, reference, amountInRands, sendE
         const price = Number(item.variant.salePrice ?? item.variant.price);
         return sum + price * item.quantity;
     }, 0);
-    const shipping = subtotal >= 1000 ? 0 : 100;
-    const total = amountInRands; // PayFast sends amount in Rands, not cents
+    const shipping = amountInRands - subtotal;
+    const total = amountInRands;
     const newOrder = await prisma_1.default.order.create({
         data: {
             userId,
@@ -54,6 +54,7 @@ async function fulfillOrder({ userId, addressId, reference, amountInRands, sendE
             discount: 0,
             total,
             paymentReference: reference,
+            courierServiceLevelCode: serviceLevelCode,
             isPaid: true,
             paidAt: new Date(),
             items: {
@@ -103,8 +104,12 @@ async function fulfillOrder({ userId, addressId, reference, amountInRands, sendE
                 },
                 parcels: newOrder.items.flatMap(item => Array.from({ length: item.quantity }, () => ({
                     description: item.product.name,
-                    weightKg: 0.5, // TODO: real per-item weight once you add it to Product/Variant
+                    weightKg: item.variant.weightKg ? Number(item.variant.weightKg) : 0.5,
+                    lengthCm: item.variant.lengthCm ?? undefined,
+                    widthCm: item.variant.widthCm ?? undefined,
+                    heightCm: item.variant.heightCm ?? undefined,
                 }))),
+                serviceLevelCode,
             });
             await prisma_1.default.order.update({
                 where: { id: newOrder.id },
@@ -155,21 +160,22 @@ async function fulfillOrder({ userId, addressId, reference, amountInRands, sendE
     return newOrder;
 }
 // ─── Controllers ────────────────────────────────────────────────────────────
-/**
- * Returns the PayFast payment data + signature so the frontend can
- * build a form and POST directly to PayFast.
- */
 const initializePayment = async (req, res) => {
     try {
-        const { addressId } = req.body;
+        const { addressId, serviceLevelCode } = req.body;
         const userId = req.user?.id;
         if (!userId)
             return res.status(401).json({ message: 'Unauthorized' });
         if (!addressId)
             return res.status(400).json({ message: 'Address required' });
+        if (!serviceLevelCode)
+            return res.status(400).json({ message: 'Delivery option required' });
         const user = await prisma_1.default.user.findUnique({ where: { id: userId } });
         if (!user)
             return res.status(404).json({ message: 'User not found' });
+        const address = await prisma_1.default.address.findFirst({ where: { id: addressId, userId } });
+        if (!address)
+            return res.status(404).json({ message: 'Address not found' });
         const cartItems = await prisma_1.default.cart.findMany({
             where: { userId },
             include: { variant: true, product: true },
@@ -180,13 +186,34 @@ const initializePayment = async (req, res) => {
             const price = Number(item.variant.salePrice ?? item.variant.price);
             return sum + price * item.quantity;
         }, 0);
-        const shipping = subtotal >= 1000 ? 0 : 100;
+        // Re-quote server-side — never trust a client-supplied shipping price.
+        const quote = await (0, courierGuy_1.getQuote)({
+            deliveryAddress: {
+                street: address.street,
+                city: address.city,
+                province: address.province,
+                postalCode: address.postalCode,
+                country: 'ZA',
+            },
+            parcels: cartItems.flatMap(item => Array.from({ length: item.quantity }, () => ({
+                description: item.product.name,
+                weightKg: item.variant.weightKg ? Number(item.variant.weightKg) : 0.5,
+                lengthCm: item.variant.lengthCm ?? undefined,
+                widthCm: item.variant.widthCm ?? undefined,
+                heightCm: item.variant.heightCm ?? undefined,
+            }))),
+        });
+        const rawRates = Array.isArray(quote) ? quote : quote.rates || [];
+        const selected = rawRates.find((r) => (r.service_level?.code ?? r.service_level_code) === serviceLevelCode);
+        if (!selected) {
+            return res.status(400).json({ message: 'Selected delivery option is no longer available — please choose again' });
+        }
+        const shipping = Number(selected.rate ?? selected.total_price ?? selected.price);
         const total = subtotal + shipping;
         const reference = `FLAWS-${Date.now()}-${Math.random().toString(36).slice(2).toUpperCase()}`;
         const merchantId = process.env.PAYFAST_MERCHANT_ID;
         const merchantKey = process.env.PAYFAST_MERCHANT_KEY;
         const passphrase = process.env.PAYFAST_PASSPHRASE || null;
-        const baseUrl = process.env.APP_BASE_URL;
         const paymentData = {
             merchant_id: merchantId,
             merchant_key: merchantKey,
@@ -199,9 +226,9 @@ const initializePayment = async (req, res) => {
             m_payment_id: reference,
             amount: total.toFixed(2),
             item_name: 'FLAWS Order',
-            // Pass metadata through custom fields
             custom_str1: userId,
             custom_str2: addressId,
+            custom_str3: serviceLevelCode,
         };
         const signature = generatePayFastSignature(paymentData, passphrase);
         res.json({
@@ -210,6 +237,7 @@ const initializePayment = async (req, res) => {
                 ? 'https://sandbox.payfast.co.za/eng/process'
                 : 'https://www.payfast.co.za/eng/process',
             amount: total,
+            shipping,
         });
     }
     catch (err) {
@@ -217,47 +245,39 @@ const initializePayment = async (req, res) => {
     }
 };
 exports.initializePayment = initializePayment;
-/**
- * PayFast ITN (Instant Transaction Notification) handler.
- * PayFast POSTs here server-to-server after payment.
- * This is your source of truth — fulfill the order here.
- */
 const payfastITN = async (req, res) => {
     try {
         const body = req.body;
         const passphrase = process.env.PAYFAST_PASSPHRASE || null;
-        // 1. Validate signature
         if (!validateITNSignature(body, passphrase)) {
             console.error('PayFast ITN: Invalid signature');
             return res.status(400).send('Invalid signature');
         }
-        // 2. Validate payment status
         if (body.payment_status !== 'COMPLETE') {
-            // Not a completed payment — acknowledge and ignore
             return res.sendStatus(200);
         }
-        // 3. Validate amount matches expected (prevent price tampering)
         const reference = body.m_payment_id;
         const amountPaid = parseFloat(body.amount_gross);
         const userId = body.custom_str1;
         const addressId = body.custom_str2;
+        const serviceLevelCode = body.custom_str3;
         if (!reference || !userId || !addressId) {
             console.error('PayFast ITN: Missing required fields');
             return res.status(400).send('Missing fields');
         }
-        // 4. Fulfill
         await fulfillOrder({
             userId,
             addressId,
             reference,
             amountInRands: amountPaid,
+            serviceLevelCode: serviceLevelCode || 'ECO',
             sendEmail: true,
         });
         res.sendStatus(200);
     }
     catch (err) {
         console.error('PayFast ITN error:', err);
-        res.sendStatus(200); // Always 200 to PayFast or it retries
+        res.sendStatus(200);
     }
 };
 exports.payfastITN = payfastITN;

@@ -259,6 +259,7 @@ function variantRow(i) {
           <input class="form-input" type="number" step="0.01" name="variants[${i}][salePrice]" placeholder="—" />
         </div>
       </div>
+      
       <div class="form-group">
         <label class="form-label">Stock</label>
         <input class="form-input" type="number" name="variants[${i}][stock]" placeholder="10" value="10" required />
@@ -266,6 +267,27 @@ function variantRow(i) {
       <div class="form-group">
         <label class="form-label">SKU</label>
         <input class="form-input" type="text" name="variants[${i}][sku]" placeholder="FLW-BLK-M-001" />
+      </div>
+      <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#555;margin:1rem 0 0.5rem;">Shipping (optional — used for courier booking)</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Weight (kg)</label>
+          <input class="form-input" type="number" step="0.01" name="variants[${i}][weightKg]" placeholder="0.30" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Length (cm)</label>
+          <input class="form-input" type="number" name="variants[${i}][lengthCm]" placeholder="30" />
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Width (cm)</label>
+          <input class="form-input" type="number" name="variants[${i}][widthCm]" placeholder="25" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Height (cm)</label>
+          <input class="form-input" type="number" name="variants[${i}][heightCm]" placeholder="5" />
+        </div>
       </div>
     </div>
   `;
@@ -311,6 +333,10 @@ async function postProduct(req, res) {
                         salePrice: v.salePrice ? parseFloat(v.salePrice) : null,
                         stock: parseInt(v.stock),
                         sku: v.sku || null,
+                        weightKg: v.weightKg ? parseFloat(v.weightKg) : null,
+                        lengthCm: v.lengthCm ? parseInt(v.lengthCm) : null,
+                        widthCm: v.widthCm ? parseInt(v.widthCm) : null,
+                        heightCm: v.heightCm ? parseInt(v.heightCm) : null,
                     })),
                 },
             },
@@ -345,7 +371,7 @@ async function getEditProduct(req, res) {
     ${img.isPrimary ? '<span style="display:block;font-size:0.55rem;color:#888;text-align:center;margin-top:2px;">Primary</span>' : ''}
   </div>
 `).join('');
-    const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+    const sizes = ['S', 'M', 'L', 'XL'];
     const existingVariants = product.variants.map((v, i) => {
         const sizeOptions = sizes.map(s => `<option value="${s}" ${v.size === s ? 'selected' : ''}>${s}</option>`).join('');
         return `
@@ -375,9 +401,30 @@ async function getEditProduct(req, res) {
             <input class="form-input" type="number" step="0.01" name="variants[${i}][salePrice]" value="${v.salePrice || ''}" />
           </div>
         </div>
-        <div class="form-group">
+       <div class="form-group">
           <label class="form-label">Stock</label>
           <input class="form-input" type="number" name="variants[${i}][stock]" value="${v.stock}" required />
+        </div>
+        <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#555;margin:1rem 0 0.5rem;">Shipping (optional — used for courier booking)</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Weight (kg)</label>
+            <input class="form-input" type="number" step="0.01" name="variants[${i}][weightKg]" value="${v.weightKg || ''}" placeholder="0.30" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Length (cm)</label>
+            <input class="form-input" type="number" name="variants[${i}][lengthCm]" value="${v.lengthCm || ''}" placeholder="30" />
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Width (cm)</label>
+            <input class="form-input" type="number" name="variants[${i}][widthCm]" value="${v.widthCm || ''}" placeholder="25" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Height (cm)</label>
+            <input class="form-input" type="number" name="variants[${i}][heightCm]" value="${v.heightCm || ''}" placeholder="5" />
+          </div>
         </div>
       </div>
     `;
@@ -507,6 +554,10 @@ async function postEditProduct(req, res) {
                         price: parseFloat(v.price),
                         salePrice: v.salePrice ? parseFloat(v.salePrice) : null,
                         stock: parseInt(v.stock),
+                        weightKg: v.weightKg ? parseFloat(v.weightKg) : null,
+                        lengthCm: v.lengthCm ? parseInt(v.lengthCm) : null,
+                        widthCm: v.widthCm ? parseInt(v.widthCm) : null,
+                        heightCm: v.heightCm ? parseInt(v.heightCm) : null,
                     },
                 });
             }

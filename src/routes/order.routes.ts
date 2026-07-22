@@ -4,6 +4,7 @@ import {
   getUserOrders,
   getOrderById,
   cancelOrder,
+  trackOrder,
 } from '../controllers/order.controller'
 import { requireAuth } from '../middleware/auth.middleware'
 
@@ -14,6 +15,7 @@ router.use(requireAuth)
 router.post('/', createOrder)
 router.get('/', getUserOrders)
 router.get('/:id', getOrderById)
+router.get('/:id/tracking', requireAuth, trackOrder)
 router.patch('/:id/cancel', cancelOrder)
 
 export default router

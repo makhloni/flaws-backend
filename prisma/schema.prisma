@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum OrderStatus {
@@ -101,6 +102,10 @@ model ProductVariant {
   price      Decimal    @db.Decimal(10, 2)
   salePrice  Decimal?   @db.Decimal(10, 2) 
   stock      Int        @default(0)
+  weightKg   Decimal?   @db.Decimal(6, 2)
+  lengthCm   Int?
+  widthCm    Int?
+  heightCm   Int?
   cart       Cart[]
   orderItems OrderItem[]
 }
@@ -144,26 +149,27 @@ model Favourites {
 }
 
 model Order {
-  id                String      @id @default(uuid())
-  user              User        @relation(fields: [userId], references: [id])
-  userId            String
-  address           Address     @relation(fields: [addressId], references: [id])
-  addressId         String
-  status            OrderStatus @default(PENDING)
-  items             OrderItem[]
-  subtotal          Decimal     @db.Decimal(10, 2)
-  shippingCost      Decimal     @db.Decimal(10, 2) @default(0)
-  discount          Decimal     @db.Decimal(10, 2) @default(0)
-  total             Decimal     @db.Decimal(10, 2)
-  paymentReference  String?     @unique
-  isPaid            Boolean     @default(false)
-  paidAt            DateTime?
-  trackingNumber    String?
-  courierWaybillId  String?     // Courier Guy's internal shipment/waybill ID
-  courierBookedAt   DateTime?
-  courierStatus     String?     // last known status string from Courier Guy
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  id                    String      @id @default(uuid())
+  user                  User        @relation(fields: [userId], references: [id])
+  userId                String
+  address               Address     @relation(fields: [addressId], references: [id])
+  addressId             String
+  status                OrderStatus @default(PENDING)
+  items                 OrderItem[]
+  subtotal              Decimal     @db.Decimal(10, 2)
+  shippingCost          Decimal     @db.Decimal(10, 2) @default(0)
+  discount              Decimal     @db.Decimal(10, 2) @default(0)
+  total                 Decimal     @db.Decimal(10, 2)
+  paymentReference      String?     @unique
+  isPaid                Boolean     @default(false)
+  paidAt                DateTime?
+  trackingNumber        String?
+  courierWaybillId      String?
+  courierBookedAt       DateTime?
+  courierStatus         String?
+  courierServiceLevelCode String?   // new
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 }
 
 model OrderItem {

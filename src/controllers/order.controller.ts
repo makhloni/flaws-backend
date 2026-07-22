@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import prisma from '../lib/prisma'
+import { getShipmentStatus } from '../lib/courierGuy'
 
 // POST /api/orders
 export const createOrder = async (req: Request, res: Response) => {
@@ -120,6 +121,31 @@ export const getOrderById = async (req: Request, res: Response) => {
   res.json(order)
 }
 
+// GET /api/orders/:id/tracking
+export const trackOrder = async (req: Request, res: Response) => {
+  const userId = req.user!.id
+  const id = req.params.id as string
+
+  const order = await prisma.order.findFirst({
+    where: { id, userId },
+  })
+
+  if (!order) return res.status(404).json({ message: 'Order not found' })
+
+  if (!order.courierWaybillId) {
+    return res.json({ booked: false, status: null })
+  }
+
+  try {
+    const status = await getShipmentStatus(order.courierWaybillId)
+    res.json({ booked: true, status })
+  } catch (err: any) {
+    console.error('Tracking lookup failed:', err.response?.data || err.message)
+    res.status(502).json({ message: 'Could not fetch tracking status right now' })
+  }
+}
+
+
 // PATCH /api/orders/:id/cancel
 export const cancelOrder = async (req: Request, res: Response) => {
   const userId = req.user!.id
@@ -153,3 +179,4 @@ export const cancelOrder = async (req: Request, res: Response) => {
 
   res.json({ message: 'Order cancelled and stock restored' })
 }
+

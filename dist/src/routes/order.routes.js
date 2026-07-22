@@ -8,5 +8,6 @@ router.use(auth_middleware_1.requireAuth);
 router.post('/', order_controller_1.createOrder);
 router.get('/', order_controller_1.getUserOrders);
 router.get('/:id', order_controller_1.getOrderById);
+router.get('/:id/tracking', auth_middleware_1.requireAuth, order_controller_1.trackOrder);
 router.patch('/:id/cancel', order_controller_1.cancelOrder);
 exports.default = router;

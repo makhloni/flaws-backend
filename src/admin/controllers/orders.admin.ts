@@ -200,18 +200,17 @@ export async function updateOrderStatus(req: Request, res: Response) {
   res.redirect(`/admin/orders/${id}`)
 }
 
-
 export async function bookCourierManually(req: Request, res: Response) {
   const id = req.params.id as string
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { address: true, user: true, items: { include: { product: true } } },
+    include: { address: true, user: true, items: { include: { product: true, variant: true } } },
   })
   if (!order || !order.address) return res.redirect(`/admin/orders/${id}`)
 
   if (order.courierWaybillId) {
     console.log('Order already has a courier booking, skipping.')
-    return res.redirect(`/admin/orders/${id}`)
+    return res.redirect(`/admin/orders/${id}?notice=${encodeURIComponent('Courier already booked for this order')}`)
   }
 
   try {
@@ -232,9 +231,13 @@ export async function bookCourierManually(req: Request, res: Response) {
       parcels: order.items.flatMap(item =>
         Array.from({ length: item.quantity }, () => ({
           description: item.product.name,
-          weightKg: 0.5,
+          weightKg: item.variant.weightKg ? Number(item.variant.weightKg) : 0.5,
+          lengthCm: item.variant.lengthCm ?? undefined,
+          widthCm: item.variant.widthCm ?? undefined,
+          heightCm: item.variant.heightCm ?? undefined,
         }))
       ),
+      serviceLevelCode: order.courierServiceLevelCode || 'ECO',
     })
 
     await prisma.order.update({

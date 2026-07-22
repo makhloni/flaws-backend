@@ -3,8 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cancelOrder = exports.getOrderById = exports.getUserOrders = exports.createOrder = void 0;
+exports.cancelOrder = exports.trackOrder = exports.getOrderById = exports.getUserOrders = exports.createOrder = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
+const courierGuy_1 = require("../lib/courierGuy");
 // POST /api/orders
 const createOrder = async (req, res) => {
     const userId = req.user.id;
@@ -109,6 +110,28 @@ const getOrderById = async (req, res) => {
     res.json(order);
 };
 exports.getOrderById = getOrderById;
+// GET /api/orders/:id/tracking
+const trackOrder = async (req, res) => {
+    const userId = req.user.id;
+    const id = req.params.id;
+    const order = await prisma_1.default.order.findFirst({
+        where: { id, userId },
+    });
+    if (!order)
+        return res.status(404).json({ message: 'Order not found' });
+    if (!order.courierWaybillId) {
+        return res.json({ booked: false, status: null });
+    }
+    try {
+        const status = await (0, courierGuy_1.getShipmentStatus)(order.courierWaybillId);
+        res.json({ booked: true, status });
+    }
+    catch (err) {
+        console.error('Tracking lookup failed:', err.response?.data || err.message);
+        res.status(502).json({ message: 'Could not fetch tracking status right now' });
+    }
+};
+exports.trackOrder = trackOrder;
 // PATCH /api/orders/:id/cancel
 const cancelOrder = async (req, res) => {
     const userId = req.user.id;
