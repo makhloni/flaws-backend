@@ -220,6 +220,20 @@ export async function getNewProduct(req: Request, res: Response) {
     </form>
 
     <script>
+      const nameInput = document.querySelector('input[name="name"]')
+      const slugInput = document.querySelector('input[name="slug"]')
+      let slugManuallyEdited = false
+
+      slugInput.addEventListener('input', () => { slugManuallyEdited = true })
+      nameInput.addEventListener('input', () => {
+        if (slugManuallyEdited) return
+        slugInput.value = nameInput.value
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      })
+
       let variantCount = 1
       function variantRow(i) {
         return \`${variantRow('VARINDEX')}\`.replace(/VARINDEX/g, i)
@@ -231,6 +245,7 @@ export async function getNewProduct(req: Request, res: Response) {
         container.appendChild(div)
       }
     </script>
+
   `
   res.send(layout('New Product', body, 'products'))
 }
@@ -300,7 +315,12 @@ function variantRow(i: number | string) {
 
 export async function postProduct(req: Request, res: Response) {
   try {
-    const { name, slug, description, collectionId, gender, isFeatured } = req.body
+    const { name, description, collectionId, gender, isFeatured } = req.body
+    const slug = req.body.slug
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
     const files = req.files as Express.Multer.File[]
 
     const imageUrls: string[] = []
@@ -532,7 +552,12 @@ export async function getEditProduct(req: Request, res: Response) {
 export async function postEditProduct(req: Request, res: Response) {
   const id = req.params.id as string
   try {
-    const { name, slug, description, collectionId, gender, isFeatured } = req.body
+    const { name, description, collectionId, gender, isFeatured } = req.body
+    const slug = req.body.slug
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
     const files = req.files as Express.Multer.File[]
 
     for (const file of files || []) {
