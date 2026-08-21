@@ -45,16 +45,18 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out
 }
 
-async function sendLaunchEmails(csvPath: string) {
+async function sendLaunchEmails(testEmail?: string) {
   const csvContent = fs.readFileSync(
-  require('path').join(__dirname, '../data/flaws-waitlist.csv'),
-  'utf-8'
-)
-  const records: WaitlistRow[] = parse(csvContent, {
-    columns: true,
-    skip_empty_lines: true,
-    trim: true,
-  })
+    require('path').join(__dirname, '../data/flaws-waitlist.csv'),
+    'utf-8'
+  )
+  const records: WaitlistRow[] = testEmail
+    ? [{ email: testEmail, name: 'Andile' }]
+    : parse(csvContent, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+      })
 
   const batches = chunk(records, 100)
 
