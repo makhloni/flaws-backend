@@ -10,7 +10,7 @@ import { getUsers } from '../controllers/users.admin'
 import { getActivityLog } from '../controllers/activity.admin'
 import { getHomepage, postHomepage } from '../controllers/homepage.admin'
 import { adminExportWaitlistCSV, adminGetWaitlist, adminToggleWaitlistMode } from '../controllers/waitlist.admin'
-import { sendLaunchEmails } from '../lib/sendLaunchEmail'
+import { sendLaunchEmails } from '../../lib/sendLaunchEmail'
 
 const router = Router()
 const upload = multer({
