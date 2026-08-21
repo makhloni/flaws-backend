@@ -1,6 +1,8 @@
 import { Request, Response } from 'express'
 import prisma from '../lib/prisma'
-import { sendWaitlistConfirmation } from '../lib/email'
+import { sendWaitlistConfirmation } from '../lib/waitlistConfirmation'
+
+
 
 // POST /waitlist
 export const joinWaitlist = async (req: Request, res: Response) => {
