@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
 import crypto from 'crypto'
 import prisma from '../lib/prisma'
-import { sendOrderConfirmation } from '../lib/email'
+import { sendOrderConfirmation } from '../lib/orderConfirmation'
 import { createShipment, getQuote } from '../lib/courierGuy'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
