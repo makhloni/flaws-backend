@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma'
-import { sendAbandonedCart } from '../lib/email'
+import { sendAbandonedCart } from '../lib/abandonedCart'
 
 export async function runAbandonedCartJob() {
   console.log('[AbandonedCart] Running job...')
