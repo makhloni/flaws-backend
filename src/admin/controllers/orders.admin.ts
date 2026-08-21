@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import prisma from '../../lib/prisma'
 import { layout } from '../views/layout'
 import { logActivity } from '../lib/logger'
-import { sendOrderStatusUpdate } from '../../lib/email'
+import { sendOrderStatusUpdate } from '../../lib/orderStatusUpdate''
 import { createShipment } from '../../lib/courierGuy'
 
 export async function getOrders(req: Request, res: Response) {
