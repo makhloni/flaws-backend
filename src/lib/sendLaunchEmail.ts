@@ -49,7 +49,8 @@ async function sendLaunchEmails() {
   const csvContent = fs.readFileSync(
     require('path').join(__dirname, '../data/flaws-waitlist.csv'),
     'utf-8'
-  )
+  
+console.log(csvContent)
   const records: WaitlistRow[] = testEmail
     ? [{ email: testEmail, name: 'Andile' }]
     : parse(csvContent, {
