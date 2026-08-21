@@ -81,4 +81,4 @@ async function sendLaunchEmails(csvPath: string) {
   }
 }
 
-sendLaunchEmails('./waitlist.csv')
+export { sendLaunchEmails }
