@@ -58,6 +58,8 @@ async function sendLaunchEmails(testEmail?: string) {
         trim: true,
       })
 
+ console.log(records)
+
   const batches = chunk(records, 100)
 
   for (const batch of batches) {
