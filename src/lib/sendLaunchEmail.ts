@@ -47,7 +47,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
 
 async function sendLaunchEmails() {
   const csvContent = fs.readFileSync(
-    require('path').join(__dirname, '../data/flaws-waitlist.csv'),
+    require('path').join(__dirname, '../../data/flaws-waitlist.csv'),
     'utf-8'
   
 console.log(csvContent)
