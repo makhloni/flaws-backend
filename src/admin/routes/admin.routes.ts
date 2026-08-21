@@ -10,6 +10,7 @@ import { getUsers } from '../controllers/users.admin'
 import { getActivityLog } from '../controllers/activity.admin'
 import { getHomepage, postHomepage } from '../controllers/homepage.admin'
 import { adminExportWaitlistCSV, adminGetWaitlist, adminToggleWaitlistMode } from '../controllers/waitlist.admin'
+import { sendLaunchEmails } from '../lib/sendLaunchEmail
 
 const router = Router()
 const upload = multer({
@@ -78,6 +79,20 @@ router.get('/waitlist', adminGetWaitlist)
 router.post('/waitlist/toggle', adminToggleWaitlistMode)
 router.get('/waitlist/export', adminExportWaitlistCSV)
 
+
+'
+
+router.post('/admin/trigger-launch-email', async (req, res) => {
+  if (req.headers['x-admin-secret'] !== process.env.ADMIN_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+  try {
+    await sendLaunchEmails()
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to send' })
+  }
+})
 
 
 export default router
