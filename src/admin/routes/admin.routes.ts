@@ -84,7 +84,7 @@ router.post('/trigger-launch-email', async (req, res) => {
     return res.status(401).json({ error: 'Unauthorized' })
   }
   try {
-    await sendLaunchEmails()
+    await sendLaunchEmails('andilemhlanga16@gmail.com')
     res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: 'Failed to send' })
