@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import fs from 'fs'
+import path from 'path'
 import { parse } from 'csv-parse/sync'
 import { COLORS, emailWrapper, sectionHeader, crimsonDivider } from './emailDesign'
 
@@ -45,12 +46,13 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out
 }
 
-async function sendLaunchEmails() {
-  const csvContent = fs.readFileSync(
-    require('path').join(__dirname, '../../data/flaws-waitlist.csv'),
-    'utf-8'
-  
-console.log(csvContent)
+async function sendLaunchEmails(testEmail?: string) {
+  const csvPath = path.join(__dirname, '../../src/data/flaws-waitlist.csv')
+  console.log('Reading CSV from:', csvPath)
+
+  const csvContent = fs.readFileSync(csvPath, 'utf-8')
+  console.log('CSV content:', csvContent.slice(0, 200))
+
   const records: WaitlistRow[] = testEmail
     ? [{ email: testEmail, name: 'Andile' }]
     : parse(csvContent, {
@@ -59,7 +61,7 @@ console.log(csvContent)
         trim: true,
       })
 
- console.log(records)
+  console.log('Records to send:', records)
 
   const batches = chunk(records, 100)
 
@@ -80,6 +82,7 @@ console.log(csvContent)
       }
     } catch (err) {
       console.error('Batch send error:', err)
+      throw err
     }
 
     await new Promise((res) => setTimeout(res, 1000))
