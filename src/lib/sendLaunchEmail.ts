@@ -54,7 +54,7 @@ async function sendLaunchEmails(testEmail?: string) {
   console.log('CSV content:', csvContent.slice(0, 200))
 
   const allRecords: WaitlistRow[] = testEmail
-  ? [{ email: testEmail, name: 'Andile' }]
+  ? [{ Email: testEmail, Name: 'Andile' }]
   : parse(csvContent, {
       columns: true,
       skip_empty_lines: true,
