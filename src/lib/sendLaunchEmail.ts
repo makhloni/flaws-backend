@@ -12,8 +12,8 @@ function getFrom() {
 }
 
 interface WaitlistRow {
-  email: string
-  name?: string
+  Email: string
+  Name?: string
 }
 
 function buildLaunchHtml(firstName?: string): string {
@@ -53,25 +53,25 @@ async function sendLaunchEmails(testEmail?: string) {
   const csvContent = fs.readFileSync(csvPath, 'utf-8')
   console.log('CSV content:', csvContent.slice(0, 200))
 
-  const records: WaitlistRow[] = testEmail
-    ? [{ email: testEmail, name: 'Andile' }]
-    : parse(csvContent, {
-        columns: true,
-        skip_empty_lines: true,
-        trim: true,
-      })
+  const allRecords: WaitlistRow[] = testEmail
+  ? [{ email: testEmail, name: 'Andile' }]
+  : parse(csvContent, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    })
 
-  console.log('Records to send:', records)
+const records = allRecords.filter(r => r.Email && r.Email.trim() !== '')
 
   const batches = chunk(records, 100)
 
   for (const batch of batches) {
     const emails = batch.map((r) => ({
   from: getFrom(),
-  to: r.email,
-  subject: "FLAWS is open — you're first",
-  html: buildLaunchHtml(r.name?.split(' ')[0]),
-  text: `Hi${r.name ? ` ${r.name.split(' ')[0]}` : ''},\n\nThe wait is over. FLAWS is officially open — the full collection is live.\n\nShop now: https://flawswrldwide.com\n\nFLAWS. South Africa.\nsupport@flaws.co.za`,
+  to: r.Email,
+  subject: "We're live — FLAWS is open",
+  html: buildLaunchHtml(r.Name?.split(' ')[0]),
+  text: `Hi${r.Name ? ` ${r.Name.split(' ')[0]}` : ''},\n\nThe wait is over. FLAWS is officially open.\n\nShop now: https://flawswrldwide.com\n\nFLAWS South Africa\nsupport@flaws.co.za`,
 }))
 
     try {
