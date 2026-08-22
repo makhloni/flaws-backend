@@ -61,8 +61,17 @@ async function sendLaunchEmails(testEmail?: string) {
       trim: true,
     })
 
-const records = allRecords.filter(r => r.Email && r.Email.trim() !== '')
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+const records = allRecords.filter(r => {
+  const email = r.Email?.trim()
+  if (!email) return false
+  if (!emailRegex.test(email)) {
+    console.log('Skipping invalid email:', JSON.stringify(email))
+    return false
+  }
+  return true
+})
   const batches = chunk(records, 100)
 
   for (const batch of batches) {
