@@ -47,7 +47,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 async function sendLaunchEmails(testEmail?: string) {
-  const csvPath = path.join(__dirname, '../../src/data/flaws-waitlist.csv')
+  const csvPath = path.join(__dirname, '../../src/data/flaws-waitlist-batch-2.csv')
   console.log('Reading CSV from:', csvPath)
 
   const csvContent = fs.readFileSync(csvPath, 'utf-8')
