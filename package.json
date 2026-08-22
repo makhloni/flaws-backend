@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/src/index.js",
-    "dev": "tsx watch src/index.ts"
+    "build": "tsc && mkdir -p dist/src/data && cp src/data/flaws-waitlist.csv dist/src/data/flaws-waitlist.csv",
+  "start": "node dist/src/index.js",
+  "dev": "tsx watch src/index.ts"
   },
   "keywords": [],
   "author": "",
