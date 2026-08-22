@@ -67,11 +67,12 @@ async function sendLaunchEmails(testEmail?: string) {
 
   for (const batch of batches) {
     const emails = batch.map((r) => ({
-      from: getFrom(),
-      to: r.email,
-      subject: "We're live — FLAWS is open",
-      html: buildLaunchHtml(r.name?.split(' ')[0]),
-    }))
+  from: getFrom(),
+  to: r.email,
+  subject: "FLAWS is open — you're first",
+  html: buildLaunchHtml(r.name?.split(' ')[0]),
+  text: `Hi${r.name ? ` ${r.name.split(' ')[0]}` : ''},\n\nThe wait is over. FLAWS is officially open — the full collection is live.\n\nShop now: https://flawswrldwide.com\n\nFLAWS. South Africa.\nsupport@flaws.co.za`,
+}))
 
     try {
       const { data, error } = await getResend().batch.send(emails)
