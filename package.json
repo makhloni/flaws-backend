@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc && mkdir -p dist/src/data && cp src/data/flaws-waitlist.csv dist/src/data/flaws-waitlist.csv",
+    ""build": "tsc && mkdir -p dist/src/data && cp src/data/*.csv dist/src/data/",
   "start": "node dist/src/index.js",
   "dev": "tsx watch src/index.ts"
   },
