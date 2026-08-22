@@ -66,13 +66,15 @@ const records = allRecords.filter(r => r.Email && r.Email.trim() !== '')
   const batches = chunk(records, 100)
 
   for (const batch of batches) {
-    const emails = batch.map((r) => ({
+
+const emails = batch.map((r) => ({
   from: getFrom(),
   to: r.Email.trim(),
   subject: "We're live — FLAWS is open",
-  html: buildLaunchHtml(r.Name?.split(' ')[0]),
-  text: `Hi${r.Name ? ` ${r.Name.split(' ')[0]}` : ''},\n\nThe wait is over. FLAWS is officially open.\n\nShop now: https://flawswrldwide.com\n\nFLAWS South Africa\nsupport@flaws.co.za`,
+  html: buildLaunchHtml(r.Name?.trim().split(' ')[0]),
+  text: `Hi${r.Name ? ` ${r.Name.trim().split(' ')[0]}` : ''},\n\nThe wait is over. FLAWS is officially open.\n\nShop now: https://flawswrldwide.com\n\nFLAWS South Africa\nsupport@flaws.co.za`,
 }))
+
 
     try {
       const { data, error } = await getResend().batch.send(emails)
